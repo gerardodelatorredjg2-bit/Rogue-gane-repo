@@ -327,7 +327,7 @@ func remove_player(peer_id: int) -> void:
 		players.erase(peer_id)
 
 @rpc("authority", "call_local", "reliable")
-func receive_session_config(map_index: int, seed_value: int, new_quota: int, new_credits: int, new_round: int, new_collected: int) -> void:
+func receive_session_config(map_index: int, seed_value: int, new_quota: int, new_credits: int, new_round: int, new_collected: int, taken_item_ids: Array[String]) -> void:
 	current_map = map_index
 	session_seed = seed_value
 	quota = new_quota
@@ -335,20 +335,22 @@ func receive_session_config(map_index: int, seed_value: int, new_quota: int, new
 	round_index = new_round
 	collected = new_collected
 	_start_session_world()
-	for i in range(12):
-		var item_id := "salvage_%02d" % i
-		if not _loot_exists(item_id):
-			continue
-		if multiplayer.is_server():
-			continue
-		if i < new_collected:
-			remove_loot(item_id)
+	for item_id in taken_item_ids:
+		remove_loot(item_id)
 
 func _loot_exists(item_id: String) -> bool:
 	for node in get_tree().get_nodes_in_group("loot"):
 		if node.item_id == item_id:
 			return true
 	return false
+
+func _collected_item_ids() -> Array[String]:
+	var result: Array[String] = []
+	for i in range(12):
+		var item_id := "salvage_%02d" % i
+		if not _loot_exists(item_id):
+			result.append(item_id)
+	return result
 
 @rpc("authority", "call_local", "reliable")
 func receive_enemy_spawn(enemy_id: String, pos: Vector3, variant: int) -> void:
@@ -491,7 +493,7 @@ func _next_shift() -> void:
 	collected = 0
 	quota = DEFAULT_QUOTA + int(round_index / 3)
 	round_index += 1
-	receive_session_config.rpc(current_map, session_seed, quota, credits, round_index, collected)
+	receive_session_config.rpc(current_map, session_seed, quota, credits, round_index, collected, [])
 	for peer_id in players.keys():
 		teleport_player.rpc(int(peer_id), _spawn_position_for(int(peer_id)))
 	round_finished = false
