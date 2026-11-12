@@ -38,6 +38,7 @@ var mobile_ui: Control
 var mobile_visible: bool = false
 
 func _ready() -> void:
+	Engine.max_fps = 30 if OS.has_feature("mobile") else 60
 	_configure_input()
 	_create_canvas()
 	_show_lobby()
@@ -196,7 +197,7 @@ func _start_host() -> void:
 	_start_session_world()
 	_spawn_player(1, world_info.get("spawn", Vector3.ZERO))
 	_spawn_initial_enemies()
-	set_prompt("HOST ACTIVE  //  WAITING FOR CREW ON LOCAL WI-FI")
+	set_prompt("HOST %s:%d  //  WAITING FOR CREW" % [_local_ipv4_addresses(), GAME_PORT])
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED if not OS.has_feature("mobile") else Input.MOUSE_MODE_VISIBLE
 
 func _play_solo() -> void:
@@ -243,7 +244,7 @@ func _on_server_disconnected() -> void:
 func _on_peer_connected(peer_id: int) -> void:
 	if not multiplayer.is_server() or not session_live:
 		return
-	rpc_id(peer_id, "receive_session_config", current_map, session_seed, quota, credits, round_index)
+	rpc_id(peer_id, "receive_session_config", current_map, session_seed, quota, credits, round_index, collected)
 	for existing_id in players.keys():
 		var existing: Node = players[existing_id]
 		if is_instance_valid(existing):
@@ -264,6 +265,13 @@ func _on_peer_disconnected(peer_id: int) -> void:
 		players.erase(peer_id)
 		remove_player.rpc(peer_id)
 
+func _local_ipv4_addresses() -> String:
+	var addresses := PackedStringArray()
+	for address in IP.get_local_addresses():
+		if address.contains(".") and not address.begins_with("127.") and not address.begins_with("169.254."):
+			addresses.append(address)
+	return ", ".join(addresses) if not addresses.is_empty() else "CHECK WI-FI SETTINGS"
+
 func _spawn_position_for(peer_id: int) -> Vector3:
 	var base: Vector3 = world_info.get("spawn", Vector3.ZERO)
 	return base + Vector3(float(peer_id % 4) * 1.15 - 1.7, 0, float(peer_id % 2) * 1.4)
@@ -281,10 +289,13 @@ func _start_session_world() -> void:
 
 func _clear_world() -> void:
 	if has_node("GeneratedWorld"):
-		get_node("GeneratedWorld").queue_free()
+		var old_world := get_node("GeneratedWorld")
+		remove_child(old_world)
+		old_world.free()
 	for node in get_tree().get_nodes_in_group("enemies"):
 		if is_instance_valid(node):
-			node.queue_free()
+			remove_child(node)
+			node.free()
 	enemies.clear()
 
 func _spawn_initial_enemies() -> void:
@@ -315,15 +326,29 @@ func remove_player(peer_id: int) -> void:
 			node.queue_free()
 		players.erase(peer_id)
 
-@rpc("authority", "call_remote", "reliable")
-func receive_session_config(map_index: int, seed_value: int, new_quota: int, new_credits: int, new_round: int) -> void:
+@rpc("authority", "call_local", "reliable")
+func receive_session_config(map_index: int, seed_value: int, new_quota: int, new_credits: int, new_round: int, new_collected: int) -> void:
 	current_map = map_index
 	session_seed = seed_value
 	quota = new_quota
 	credits = new_credits
 	round_index = new_round
-	collected = 0
+	collected = new_collected
 	_start_session_world()
+	for i in range(12):
+		var item_id := "salvage_%02d" % i
+		if not _loot_exists(item_id):
+			continue
+		if multiplayer.is_server():
+			continue
+		if i < new_collected:
+			remove_loot(item_id)
+
+func _loot_exists(item_id: String) -> bool:
+	for node in get_tree().get_nodes_in_group("loot"):
+		if node.item_id == item_id:
+			return true
+	return false
 
 @rpc("authority", "call_local", "reliable")
 func receive_enemy_spawn(enemy_id: String, pos: Vector3, variant: int) -> void:
@@ -464,9 +489,9 @@ func _next_shift() -> void:
 	current_map = (current_map + 1) % WorldBuilderScript.MAP_NAMES.size()
 	session_seed = randi()
 	collected = 0
-	quota = DEFAULT_QUOTA + (round_index / 3)
+	quota = DEFAULT_QUOTA + int(round_index / 3)
 	round_index += 1
-	receive_session_config.rpc(current_map, session_seed, quota, credits, round_index)
+	receive_session_config.rpc(current_map, session_seed, quota, credits, round_index, collected)
 	for peer_id in players.keys():
 		teleport_player.rpc(int(peer_id), _spawn_position_for(int(peer_id)))
 	round_finished = false
