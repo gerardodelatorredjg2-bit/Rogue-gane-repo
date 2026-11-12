@@ -190,13 +190,13 @@ func _interact() -> void:
 	if not hit.is_empty():
 		var collider: Object = hit.get("collider")
 		if collider is Node and collider.is_in_group("loot"):
-			game.request_loot(collider.item_id, player_id)
+			game.call("request_loot", str(collider.get("item_id")), player_id)
 			return
 	if game.has_method("get_exit_position"):
-		if global_position.distance_to(game.get_exit_position()) < 5.2:
-			game.request_extract(player_id)
+		if global_position.distance_to(game.call("get_exit_position")) < 5.2:
+			game.call("request_extract", player_id)
 		elif game.has_method("set_prompt"):
-			game.set_prompt("NO HAY SEÑAL // BUSCA EL PUNTO DE EXTRACCIÓN")
+			game.call("set_prompt", "NO HAY SEÑAL // BUSCA EL PUNTO DE EXTRACCIÓN")
 
 func _send_network_state() -> void:
 	if not multiplayer.has_multiplayer_peer():
@@ -233,4 +233,4 @@ func apply_damage(amount: float) -> void:
 		is_dead = true
 		velocity = Vector3.ZERO
 		if game and game.has_method("player_was_downed"):
-			game.player_was_downed(player_id)
+			game.call("player_was_downed", player_id)
