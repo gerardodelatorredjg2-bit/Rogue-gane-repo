@@ -30,6 +30,7 @@ func _ready() -> void:
 	collider.position.y = 0.9
 	add_child(collider)
 	_build_character()
+	body_visual.visible = not is_multiplayer_authority()
 	view_camera = Camera3D.new()
 	view_camera.name = "ViewCamera"
 	view_camera.position = Vector3(0, 1.56, 0)
