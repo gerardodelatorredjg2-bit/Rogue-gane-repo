@@ -145,9 +145,9 @@ func _physics_process(delta: float) -> void:
 	if network_clock >= 0.10:
 		network_clock = 0.0
 		_send_network_state()
-	if Input.is_action_just_pressed("interact") or _mobile_down("interact_once"):
+	if Input.is_action_just_pressed("interact") or consume_mobile_action("interact_once"):
 		_interact()
-	if Input.is_action_just_pressed("flashlight") or _mobile_down("flashlight_once"):
+	if Input.is_action_just_pressed("flashlight") or consume_mobile_action("flashlight_once"):
 		flashlight.visible = not flashlight.visible
 
 func _process(_delta: float) -> void:
@@ -159,6 +159,12 @@ func _mobile_down(action: String) -> bool:
 
 func set_mobile_action(action: String, pressed: bool) -> void:
 	mobile_buttons[action] = pressed
+
+func consume_mobile_action(action: String) -> bool:
+	if bool(mobile_buttons.get(action, false)):
+		mobile_buttons[action] = false
+		return true
+	return false
 
 func _unhandled_input(event: InputEvent) -> void:
 	if not is_multiplayer_authority():
