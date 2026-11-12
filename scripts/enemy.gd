@@ -117,7 +117,7 @@ func _physics_process(delta: float) -> void:
 		if direction.length() < attack_range and attack_clock <= 0.0:
 			attack_clock = 1.35
 			if game and game.has_method("server_enemy_attack"):
-				game.server_enemy_attack(int(target.player_id), 12.0 if variant == 1 else 8.0)
+				game.call("server_enemy_attack", int(target.get("player_id")), 12.0 if variant == 1 else 8.0)
 	else:
 		state = "PATROL"
 		direction = patrol_target - global_position
@@ -142,7 +142,7 @@ func _physics_process(delta: float) -> void:
 	if sync_clock >= 0.12:
 		sync_clock = 0
 		if game and game.has_method("broadcast_enemy_state"):
-			game.broadcast_enemy_state(enemy_id, global_position, rotation.y, animation_clock)
+			game.call("broadcast_enemy_state", enemy_id, global_position, rotation.y, animation_clock)
 
 func _nearest_player() -> Node3D:
 	var best: Node3D
