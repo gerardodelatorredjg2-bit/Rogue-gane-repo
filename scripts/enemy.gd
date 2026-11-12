@@ -40,7 +40,7 @@ func _ready() -> void:
 	attack_range = 1.55 if variant != 2 else 1.85
 
 func _build_robot() -> void:
-	var accent := COLORS[variant % COLORS.size()]
+	var accent: Color = COLORS[variant % COLORS.size()]
 	var metal := _mat(Color(0.12, 0.16, 0.19), 0.84, 0.35)
 	var armor := _mat(Color(0.25, 0.29, 0.30), 0.75, 0.42)
 	var glow := _mat(accent, 0.45, 0.2, true)
