@@ -246,15 +246,15 @@ func _on_peer_connected(peer_id: int) -> void:
 		return
 	rpc_id(peer_id, "receive_session_config", current_map, session_seed, quota, credits, round_index, collected)
 	for existing_id in players.keys():
-		var existing: Node = players[existing_id]
+		var existing: Node3D = players[existing_id]
 		if is_instance_valid(existing):
 			rpc_id(peer_id, "receive_spawn_player", int(existing_id), existing.global_position)
 	var spawn := _spawn_position_for(peer_id)
 	receive_spawn_player.rpc(peer_id, spawn)
 	for enemy_id in enemies.keys():
-		var enemy: Node = enemies[enemy_id]
+		var enemy: Node3D = enemies[enemy_id]
 		if is_instance_valid(enemy):
-			rpc_id(peer_id, "receive_enemy_spawn", str(enemy_id), enemy.global_position, enemy.variant)
+			rpc_id(peer_id, "receive_enemy_spawn", str(enemy_id), enemy.global_position, int(enemy.get("variant")))
 	set_prompt("CREW CONNECTED  //  PLAYER %d JOINED" % peer_id)
 
 func _on_peer_disconnected(peer_id: int) -> void:
@@ -340,7 +340,7 @@ func receive_session_config(map_index: int, seed_value: int, new_quota: int, new
 
 func _loot_exists(item_id: String) -> bool:
 	for node in get_tree().get_nodes_in_group("loot"):
-		if node.item_id == item_id:
+		if node.get("item_id") == item_id:
 			return true
 	return false
 
@@ -394,7 +394,7 @@ func _server_collect(item_id: String, player_id: int) -> void:
 	if round_finished or not players.has(player_id):
 		return
 	var player: Node3D = players[player_id]
-	var target: Node
+	var target: Node3D
 	for node in get_tree().get_nodes_in_group("loot"):
 		if node.item_id == item_id:
 			target = node
@@ -403,11 +403,12 @@ func _server_collect(item_id: String, player_id: int) -> void:
 		return
 	if player.global_position.distance_to(target.global_position) > 5.0:
 		return
-	credits += int(target.credit_value)
+	var item_value := int(target.get("credit_value"))
+	credits += item_value
 	collected += 1
 	sync_loot_count.rpc(collected, credits)
 	remove_loot.rpc(item_id)
-	set_prompt("SALVAGE SECURED  //  +%d CREDITS" % target.credit_value)
+	set_prompt("SALVAGE SECURED  //  +%d CREDITS" % item_value)
 
 @rpc("authority", "call_local", "reliable")
 func sync_loot_count(new_count: int, new_credits: int) -> void:
@@ -633,9 +634,9 @@ func _touch_button(text_value: String, left: float, top: float, right: float, bo
 	var begin := func() -> void:
 		var player := _local_player()
 		if player:
-			player.set_mobile_action(action, true)
+			player.call("set_mobile_action", action, true)
 			if not hold:
-				get_tree().create_timer(0.13).timeout.connect(func(): player.set_mobile_action(action, false))
+				get_tree().create_timer(0.13).timeout.connect(func(): player.call("set_mobile_action", action, false))
 	button.button_down.connect(begin)
 	if hold:
 		button.button_up.connect(func():
@@ -645,10 +646,10 @@ func _touch_button(text_value: String, left: float, top: float, right: float, bo
 		)
 	return button
 
-func _local_player() -> Node:
+func _local_player() -> SalvagePlayer:
 	var id := multiplayer.get_unique_id()
 	if players.has(id) and is_instance_valid(players[id]):
-		return players[id]
+		return players[id] as SalvagePlayer
 	return null
 
 func _disconnect_to_menu() -> void:
