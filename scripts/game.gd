@@ -344,7 +344,8 @@ func _clear_world() -> void:
 
 func _spawn_initial_enemies() -> void:
 	var locations: Array = world_info.get("enemy_spawns", [])
-	for i in range(mini(3, locations.size())):
+	var enemy_count := mini(locations.size(), mini(4, 2 + int(round_index / 2)))
+	for i in range(enemy_count):
 		receive_enemy_spawn.rpc("hunter_%02d" % i, locations[i], i % 3)
 
 func _spawn_player(peer_id: int, pos: Vector3) -> void:
@@ -409,6 +410,9 @@ func receive_enemy_spawn(enemy_id: String, pos: Vector3, variant: int) -> void:
 	enemy.variant = variant
 	enemy.game = self
 	add_child(enemy)
+	var difficulty_scale := 1.0 + minf(0.65, float(maxi(0, round_index - 1)) * 0.055)
+	enemy.movement_speed *= difficulty_scale
+	enemy.detection_range += minf(8.0, float(maxi(0, round_index - 1)) * 0.65)
 	enemy.global_position = pos
 	enemies[enemy_id] = enemy
 
