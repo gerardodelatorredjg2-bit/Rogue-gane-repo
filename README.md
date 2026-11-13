@@ -51,3 +51,18 @@ The industrial environment and drop-ship are original procedural geometry. The A
 ## License
 
 Code: MIT. Third-party assets, when added, retain their own original licenses and attribution requirements.
+
+
+## Immersive overhaul (in progress)
+
+This branch adds a more complete crew-facing interface and progression layer:
+
+- **System settings:** persistent callsign, master volume, look sensitivity and Low/Balanced/High frame-rate presets (30/45/60 FPS).
+- **Crew inventory panel:** recovered salvage, credits, suit integrity and stamina summary.
+- **Three emotes:** dance, wave and robot routine; keyboard shortcuts 1/2/3 and an in-game emote panel.
+- **Ship service terminal:** suit patch, stamina recharge and a two-level lantern overdrive upgrade.
+- **Contract escalation:** more hostile units and increased detection/movement pressure as shifts progress.
+- **Industrial pass:** additional wall service panels, warning stripes, ceiling pipework and cable trays; salvage now animates out when collected.
+- **Horror feedback:** hostile eye pulse and a forward attack-lunge pose.
+
+The existing licensed robot model fetch step remains in `scripts/fetch_assets.sh`. Assets are fetched during the Android CI build; check `docs/ASSETS_AND_ATTRIBUTION.md` before redistributing. The game currently uses procedural industrial ambience; a separate licensed music soundtrack has not yet been integrated.
