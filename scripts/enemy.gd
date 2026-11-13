@@ -25,7 +25,9 @@ const EXTERNAL_MODELS := [
 	"res://assets/models/robots/minion-b01.glb",
 	"res://assets/models/robots/minion-c01.glb",
 	"res://assets/models/robots/minion-d01.glb"
-]\n\nconst COLORS := [Color(0.95, 0.23, 0.16), Color(0.76, 0.30, 1.0), Color(0.92, 0.66, 0.18)]
+]
+
+const COLORS := [Color(0.95, 0.23, 0.16), Color(0.76, 0.30, 1.0), Color(0.92, 0.66, 0.18)]
 
 func _ready() -> void:
 	add_to_group("enemies")
