@@ -176,6 +176,7 @@ func play_emote(which: int) -> void:
 		return
 	emote_id = which
 	emote_time = 2.8
+	body_visual.visible = true
 	_animate_emote()
 
 func _animate_emote() -> void:
@@ -199,6 +200,7 @@ func _animate_emote() -> void:
 		left_arm.rotation.z = 0.0
 		right_arm.rotation.z = 0.0
 		body_visual.rotation.y = 0.0
+		body_visual.visible = not is_multiplayer_authority()
 
 func _process(_delta: float) -> void:
 	if is_multiplayer_authority() and game and game.has_method("set_local_player_status"):
