@@ -11,7 +11,10 @@ Cooperative sci-fi salvage horror for Android and local Wi-Fi.
 - Procedurally assembled industrial environments with six selectable site themes.
 - Robot stalkers with patrol, pursuit and attack states; the Android workflow downloads four rigged low-poly CC0 robot models and keeps a procedural fallback.
 - Salvage pickups, extraction quota, team credits and round progression.
-- Modular drop-ship landing bay with an interactive service terminal for suit repairs and stamina refills, plus industrial set dressing, hazard markings, service panels, fog and low-cost lighting.\n- HUD telemetry with suit/stamina bars, quota progress and a proximity warning sensor.\n- A lightweight procedural machine hum as a temporary ambience layer; final music is intentionally left for the project owner.
+- Modular drop-ship landing bay with an interactive service terminal for suit repairs and stamina refills, plus industrial set dressing, hazard markings, service panels, fog and low-cost lighting.\n- HUD telemetry with suit/stamina bars, quota progress, proximity warning sensor and a quick-access settings panel.
+- Persistent player profile name, master/music volume sliders, graphics FPS presets and mouse/touch look sensitivity setting.
+- Three crew emotes (dance, wave and cheer) on the mobile HUD; emotes play only while stationary.
+- Stalker escalation: later contracts increase enemy movement speed and detection range, with a short attack lunge.\n- A lightweight procedural machine hum as a temporary ambience layer; final music is intentionally left for the project owner.
 - GitHub Actions workflow for Android APK export.
 
 ## Build with Godot
@@ -42,7 +45,7 @@ LAN support depends on the Android device and hotspot allowing peer-to-peer traf
 
 ## Current scope and honest status
 
-This is an actively developed game project, not a claim of a finished commercial release. The initial repository milestone focuses on the gameplay loop and LAN foundation. Enemy navigation, mobile-device compatibility, networking under real Wi-Fi conditions, and the APK must still be tested on physical devices before calling the build production-ready.
+This is an actively developed game project, not a claim of a finished commercial release. The current milestone focuses on the gameplay loop, LAN foundation and a first player-customization/settings pass. Enemy navigation, mobile-device compatibility, networking under real Wi-Fi conditions, and the APK must still be tested on physical devices before calling the build production-ready.
 
 ## Asset policy
 
