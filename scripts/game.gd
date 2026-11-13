@@ -59,6 +59,7 @@ var mobile_ui: Control
 var mobile_visible: bool = false
 var health_bar: ProgressBar
 var stamina_bar: ProgressBar
+var battery_bar: ProgressBar
 var quota_bar: ProgressBar
 var threat_label: Label
 var hud_scan_clock: float = 0.0
@@ -185,6 +186,7 @@ func _clear_ui() -> void:
 	result_panel = null
 	health_bar = null
 	stamina_bar = null
+	battery_bar = null
 	quota_bar = null
 	threat_label = null
 	terminal_panel = null
@@ -654,7 +656,7 @@ func set_prompt(message: String) -> void:
 	if is_instance_valid(prompt_label):
 		prompt_label.text = message
 
-func set_local_player_status(current_health: float, current_stamina: float) -> void:
+func set_local_player_status(current_health: float, current_stamina: float, current_battery: float) -> void:
 	if is_instance_valid(health_label):
 		health_label.text = "SUIT  %03d%%" % int(current_health)
 	if is_instance_valid(stamina_label):
@@ -663,6 +665,10 @@ func set_local_player_status(current_health: float, current_stamina: float) -> v
 		health_bar.value = current_health
 	if is_instance_valid(stamina_bar):
 		stamina_bar.value = current_stamina
+	if is_instance_valid(battery_label):
+		battery_label.text = "LAMP CELL  %03d%%" % int(current_battery)
+	if is_instance_valid(battery_bar):
+		battery_bar.value = current_battery
 
 func _update_hud() -> void:
 	if is_instance_valid(objective_label):
@@ -705,6 +711,10 @@ func _create_hud() -> void:
 	bar.add_child(credits_label)
 	timer_label = _label("00:00", 14, Color(0.73, 0.87, 0.92))
 	bar.add_child(timer_label)
+	var bag_hud_button := _button("BAG", false)
+	bag_hud_button.custom_minimum_size = Vector2(54, 38)
+	bag_hud_button.pressed.connect(func(): toggle_inventory(multiplayer.get_unique_id()))
+	bar.add_child(bag_hud_button)
 	var settings_hud_button := _button("⚙", false)
 	settings_hud_button.custom_minimum_size = Vector2(48, 38)
 	settings_hud_button.pressed.connect(_open_settings)
@@ -715,7 +725,7 @@ func _create_hud() -> void:
 	vitals.anchor_top = 0.115
 	vitals.anchor_right = 0.28
 	vitals.anchor_bottom = 0.115
-	vitals.offset_bottom = 132
+	vitals.offset_bottom = 166
 	vitals.add_theme_stylebox_override("panel", _panel_style(Color(0.012, 0.027, 0.034, 0.82), Color(0.12, 0.38, 0.40, 0.48)))
 	ui_root.add_child(vitals)
 	var vitals_box := VBoxContainer.new()
@@ -730,6 +740,10 @@ func _create_hud() -> void:
 	vitals_box.add_child(stamina_label)
 	stamina_bar = _make_hud_bar(Color(0.22, 0.65, 0.96))
 	vitals_box.add_child(stamina_bar)
+	battery_label = _label("LAMP CELL  100%", 10, Color(0.98, 0.76, 0.35))
+	vitals_box.add_child(battery_label)
+	battery_bar = _make_hud_bar(Color(1.0, 0.68, 0.24))
+	vitals_box.add_child(battery_bar)
 
 	var objective_panel := PanelContainer.new()
 	objective_panel.anchor_left = 0.72
@@ -801,7 +815,10 @@ func _update_threat_indicator() -> void:
 	for enemy in enemies.values():
 		if is_instance_valid(enemy):
 			nearest = minf(nearest, player.global_position.distance_to(enemy.global_position))
-	if nearest < 7.0:
+	if scanner_until > shift_seconds:
+		threat_label.text = "◉  SCANNER ACTIVE // HOSTILE %.1f M" % nearest
+		threat_label.add_theme_color_override("font_color", Color(0.25, 0.88, 1.0))
+	elif nearest < 7.0:
 		threat_label.text = "●  PROXIMITY ALERT // HOSTILE VERY CLOSE"
 		threat_label.add_theme_color_override("font_color", Color(1.0, 0.25, 0.18))
 	elif nearest < 16.0:
@@ -912,6 +929,7 @@ func _create_mobile_controls() -> void:
 	_touch_button("RUN", 0.22, 0.82, 0.30, 0.92, "sprint")
 	_touch_button("USE", 0.86, 0.80, 0.94, 0.91, "interact_once", false)
 	_touch_button("LAMP", 0.86, 0.66, 0.94, 0.77, "flashlight_once", false)
+	_touch_button("BAG", 0.76, 0.52, 0.84, 0.62, "inventory_once", false)
 	_touch_button("JUMP", 0.76, 0.84, 0.84, 0.94, "jump")
 	_emote_button("DANCE", 0.39, 0.88, "dance")
 	_emote_button("WAVE", 0.48, 0.88, "wave")
