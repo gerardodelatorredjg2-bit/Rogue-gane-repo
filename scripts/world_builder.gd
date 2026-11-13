@@ -46,14 +46,14 @@ func build(parent: Node, map_index: int, seed: int) -> Dictionary:
 	_build_corridors()
 	_build_props(map_index)
 	_build_lights()
-	var exit_pos := Vector3(0, 0, -19)
+	var exit_pos := Vector3(0, 0, 10.5)
 	_build_extraction(exit_pos)
 	_build_ship(Vector3(0, 0, 17))
 	_build_hazard_details(map_index)
 	var loot_points := [
 		Vector3(-13, 0, -10), Vector3(12, 0, -12), Vector3(-15, 0, 7),
 		Vector3(15, 0, 8), Vector3(-5, 0, -1), Vector3(6, 0, 3),
-		Vector3(10, 0, 18), Vector3(-11, 0, 18), Vector3(2, 0, 12),
+		Vector3(10, 0, 18), Vector3(-11, 0, 18), Vector3(2, 0, 5),
 		Vector3(17, 0, -1), Vector3(-18, 0, -17), Vector3(1, 0, 20)
 	]
 	var loot_ids: Array[String] = []
