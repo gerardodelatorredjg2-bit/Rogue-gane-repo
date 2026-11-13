@@ -13,6 +13,7 @@ var look_sensitivity: float = 0.0022
 var network_clock: float = 0.0
 var bob_clock: float = 0.0
 var is_dead: bool = false
+var flashlight_charge: float = 100.0
 var body_visual: Node3D
 var left_arm: Node3D
 var right_arm: Node3D
@@ -94,6 +95,7 @@ func _ready() -> void:
 	flashlight.spot_range = 19.0
 	flashlight.spot_angle = 38.0
 	flashlight.shadow_enabled = false
+	flashlight.visible = false
 	view_camera.add_child(flashlight)
 	if is_multiplayer_authority():
 		if not OS.has_feature("mobile"):
@@ -191,6 +193,12 @@ func _physics_process(delta: float) -> void:
 	elif Input.is_action_just_pressed("jump") or _mobile_down("jump"):
 		velocity.y = 6.0
 	move_and_slide()
+	if flashlight and flashlight.visible:
+		flashlight_charge = maxf(0.0, flashlight_charge - 2.0 * delta)
+		if flashlight_charge <= 0.0:
+			flashlight.visible = false
+			if game and game.has_method("set_prompt"):
+				game.set_prompt("FLASHLIGHT BATTERY EMPTY  //  BUY OR FIND A CELL")
 	bob_clock += delta * (10.0 if move_input.length() > 0.1 else 2.2)
 	if body_visual:
 		body_visual.position.y = 0.92 + (sin(bob_clock) * 0.025 if move_input.length() > 0.1 else 0.0)
@@ -223,11 +231,20 @@ func _physics_process(delta: float) -> void:
 	if Input.is_action_just_pressed("interact") or consume_mobile_action("interact_once"):
 		_interact()
 	if Input.is_action_just_pressed("flashlight") or consume_mobile_action("flashlight_once"):
-		flashlight.visible = not flashlight.visible
+		if flashlight.visible:
+			flashlight.visible = false
+		elif flashlight_charge > 0.0:
+			flashlight.visible = true
+		else:
+			if game and game.has_method("set_prompt"):
+				game.set_prompt("FLASHLIGHT BATTERY EMPTY  //  FIND A BATTERY")
+	if Input.is_action_just_pressed("inventory") or consume_mobile_action("inventory_once"):
+		if game and game.has_method("toggle_inventory"):
+			game.toggle_inventory(player_id)
 
 func _process(_delta: float) -> void:
 	if is_multiplayer_authority() and game and game.has_method("set_local_player_status"):
-		game.set_local_player_status(health, stamina)
+		game.set_local_player_status(health, stamina, flashlight_charge)
 
 func _mobile_down(action: String) -> bool:
 	return bool(mobile_buttons.get(action, false))
@@ -272,6 +289,9 @@ func _interact() -> void:
 		var collider: Object = hit.get("collider")
 		if collider is Node and collider.is_in_group("loot"):
 			game.call("request_loot", str(collider.get("item_id")), player_id)
+			return
+		if collider is Node and collider.is_in_group("dropped_items"):
+			game.call("request_pickup_dropped_item", str(collider.get("drop_id")), player_id)
 			return
 		if collider is Node and collider.is_in_group("ship_terminal"):
 			game.call("open_ship_terminal", player_id)
