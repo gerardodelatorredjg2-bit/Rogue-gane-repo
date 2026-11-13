@@ -198,6 +198,9 @@ func _interact() -> void:
 		if collider is Node and collider.is_in_group("loot"):
 			game.call("request_loot", str(collider.get("item_id")), player_id)
 			return
+		if collider is Node and collider.is_in_group("ship_terminal"):
+			game.call("open_ship_terminal", player_id)
+			return
 	if game.has_method("get_exit_position"):
 		if global_position.distance_to(game.call("get_exit_position")) < 5.2:
 			game.call("request_extract", player_id)
