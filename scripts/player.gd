@@ -52,7 +52,13 @@ func _ready() -> void:
 	_build_character()
 	var profile := ConfigFile.new()
 	profile.load("user://rogue_settings.cfg")
-	set_player_name(str(profile.get_value("player", "name", "CREWMATE")))
+	var configured_name := str(profile.get_value("player", "name", "CREWMATE"))
+	set_player_name(configured_name if is_multiplayer_authority() else "CREW %02d" % player_id)
+	if is_multiplayer_authority() and multiplayer.has_multiplayer_peer():
+		if multiplayer.is_server():
+			rpc("sync_player_name", player_id, configured_name)
+		else:
+			rpc_id(1, "server_set_player_name", configured_name)
 	body_visual.visible = not is_multiplayer_authority()
 	view_camera = Camera3D.new()
 	view_camera.name = "ViewCamera"
@@ -292,3 +298,22 @@ func apply_damage(amount: float) -> void:
 		velocity = Vector3.ZERO
 		if game and game.has_method("player_was_downed"):
 			game.call("player_was_downed", player_id)
+
+@rpc("any_peer", "reliable")
+func server_set_player_name(value: String) -> void:
+	if not multiplayer.is_server():
+		return
+	if multiplayer.get_remote_sender_id() != player_id:
+		return
+	var safe_name := value.strip_edges().substr(0, 18)
+	if safe_name.is_empty():
+		safe_name = "CREWMATE"
+	rpc("sync_player_name", player_id, safe_name)
+
+@rpc("any_peer", "call_local", "reliable")
+func sync_player_name(target_id: int, value: String) -> void:
+	if not game:
+		return
+	var target: Node = game.players.get(target_id)
+	if is_instance_valid(target) and target.has_method("set_player_name"):
+		target.set_player_name(value)
