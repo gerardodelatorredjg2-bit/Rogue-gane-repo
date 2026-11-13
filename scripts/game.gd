@@ -88,6 +88,61 @@ func _process(delta: float) -> void:
 			hud_scan_clock = 0.0
 			_update_threat_indicator()
 
+
+func _default_inventory() -> Dictionary:
+	return {"medkit": 1, "battery": 1, "scanner": 0}
+
+func _inventory_slot_limit() -> int:
+	return 6 + int(ship_upgrades.get("storage", 0)) * 2
+
+func _inventory_count(player_id: int) -> int:
+	var inventory: Dictionary = player_inventories.get(player_id, _default_inventory())
+	var total := 0
+	for item_id in inventory.keys():
+		total += int(inventory[item_id])
+	return total
+
+func _load_sfx_library() -> void:
+	sfx_player = AudioStreamPlayer.new()
+	sfx_player.name = "KenneySFX"
+	sfx_player.volume_db = -7.0
+	add_child(sfx_player)
+	var directory := DirAccess.open("res://assets/audio/kenney_sci_fi")
+	if directory == null:
+		return
+	for file_name in directory.get_files():
+		var extension := file_name.get_extension().to_lower()
+		if extension == "ogg" or extension == "wav":
+			sfx_files.append(file_name)
+
+func _play_sfx(keyword: String = "") -> void:
+	if sfx_files.is_empty() or not is_instance_valid(sfx_player):
+		return
+	var candidates: Array[String] = []
+	for file_name in sfx_files:
+		if keyword.is_empty() or file_name.to_lower().contains(keyword.to_lower()):
+			candidates.append(file_name)
+	var chosen := candidates[randi_range(0, candidates.size() - 1)] if not candidates.is_empty() else sfx_files[randi_range(0, sfx_files.size() - 1)]
+	var stream := load("res://assets/audio/kenney_sci_fi/%s" % chosen) as AudioStream
+	if stream:
+		sfx_player.stream = stream
+		sfx_player.play()
+
+@rpc("authority", "call_local", "reliable")
+func sync_player_inventory(player_id: int, inventory: Dictionary) -> void:
+	player_inventories[player_id] = inventory.duplicate(true)
+	if player_id == multiplayer.get_unique_id():
+		_refresh_inventory_panel()
+
+@rpc("authority", "call_local", "reliable")
+func sync_ship_upgrades(upgrades: Dictionary) -> void:
+	ship_upgrades = upgrades.duplicate(true)
+	for peer_id in players.keys():
+		var player: Node = players[peer_id]
+		if is_instance_valid(player):
+			player.move_speed_multiplier = 1.0 + float(ship_upgrades.get("engine", 0)) * 0.05
+			player.damage_resistance = minf(0.35, float(ship_upgrades.get("hull", 0)) * 0.06)
+
 func _configure_input() -> void:
 	_add_key_action("move_forward", KEY_W)
 	_add_key_action("move_back", KEY_S)
