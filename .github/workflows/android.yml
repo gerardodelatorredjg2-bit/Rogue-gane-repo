@@ -56,9 +56,6 @@ jobs:
           export/android/java_sdk_path = "$JAVA_HOME"
           EOF
 
-      - name: Fetch licensed low-poly robot models
-        run: bash scripts/fetch_assets.sh
-
       - name: Import project and validate scripts
         run: |
           godot --headless --editor --path . --quit
