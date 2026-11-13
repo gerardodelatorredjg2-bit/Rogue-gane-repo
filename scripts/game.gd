@@ -421,6 +421,9 @@ func _on_peer_connected(peer_id: int) -> void:
 		var enemy: Node3D = enemies[enemy_id]
 		if is_instance_valid(enemy):
 			rpc_id(peer_id, "receive_enemy_spawn", str(enemy_id), enemy.global_position, int(enemy.get("variant")))
+	for dropped in get_tree().get_nodes_in_group("dropped_items"):
+		if is_instance_valid(dropped):
+			rpc_id(peer_id, "spawn_dropped_item", str(dropped.get("drop_id")), str(dropped.get("item_kind")), dropped.global_position, dropped.linear_velocity)
 	set_prompt("CREW CONNECTED  //  PLAYER %d JOINED" % peer_id)
 
 func _on_peer_disconnected(peer_id: int) -> void:
