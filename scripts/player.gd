@@ -62,6 +62,9 @@ func _apply_emote(value: String) -> void:
 
 @rpc("any_peer", "call_local", "reliable")
 func sync_emote(value: String) -> void:
+	var sender_id := multiplayer.get_remote_sender_id()
+	if sender_id != 0 and sender_id != player_id:
+		return
 	_apply_emote(value)
 
 
@@ -393,6 +396,8 @@ func server_receive_transform(pos: Vector3, yaw: float, pitch: float, current_st
 
 @rpc("any_peer", "call_remote", "unreliable")
 func client_receive_transform(pos: Vector3, yaw: float, pitch: float, current_stamina: float, current_battery: float, lamp_on: bool) -> void:
+	if multiplayer.get_remote_sender_id() != 1:
+		return
 	if is_multiplayer_authority():
 		return
 	var old_position := global_position
@@ -427,6 +432,9 @@ func server_set_player_name(value: String) -> void:
 
 @rpc("any_peer", "call_local", "reliable")
 func sync_player_name(target_id: int, value: String) -> void:
+	var sender_id := multiplayer.get_remote_sender_id()
+	if sender_id != 0 and sender_id != target_id and sender_id != 1:
+		return
 	if not game:
 		return
 	var target: Node = game.players.get(target_id)
