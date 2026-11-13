@@ -241,8 +241,15 @@ func _build_hazard_details(map_index: int) -> void:
 		_make_box("FloorWarningLine", Vector3(side * 22.4, 0.015, 0), Vector3(0.12, 0.025, 44), stripe_mat, false)
 	for i in range(8):
 		var z := -18.0 + float(i) * 5.0
-		_make_box("WallServicePanel", Vector3(-23.48, 1.7, z), Vector3(0.06, 1.25, 1.55), panel_mat, false)
-		_make_box("PanelStatusLED", Vector3(-23.40, 2.05, z - 0.42), Vector3(0.035, 0.10, 0.18), _mat(accent, 0.1, 0.25, true), false)
+		for side in [-1.0, 1.0]:
+			_make_box("WallServicePanel", Vector3(side * 23.48, 1.7, z), Vector3(0.06, 1.25, 1.55), panel_mat, false)
+			_make_box("PanelStatusLED", Vector3(side * 23.40, 2.05, z - 0.42), Vector3(0.035, 0.10, 0.18), _mat(accent, 0.1, 0.25, true), false)
+			_make_box("PanelWarningStripe", Vector3(side * 23.40, 1.12, z + 0.48), Vector3(0.04, 0.08, 0.48), stripe_mat, false)
+	for side in [-1.0, 1.0]:
+		_make_box("MainOverheadPipe", Vector3(side * 18.8, 4.15, 0), Vector3(0.32, 0.32, 43), pipe_mat, false)
+		_make_box("CableTray", Vector3(side * 16.8, 4.62, 0), Vector3(0.65, 0.10, 43), panel_mat, false)
+		for z in [-18.0, -9.0, 0.0, 9.0, 18.0]:
+			_make_box("PipeBracket", Vector3(side * 18.8, 3.92, z), Vector3(0.55, 0.16, 0.32), stripe_mat, false)
 	for i in range(6):
 		var x := -15.0 + float(i) * 6.0
 		_make_box("FloorDrain", Vector3(x, 0.012, 0), Vector3(1.8, 0.025, 0.42), pipe_mat, false)
