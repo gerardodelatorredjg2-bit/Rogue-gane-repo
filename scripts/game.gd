@@ -134,6 +134,7 @@ func sync_player_inventory(player_id: int, inventory: Dictionary) -> void:
 	player_inventories[player_id] = inventory.duplicate(true)
 	if player_id == multiplayer.get_unique_id():
 		_refresh_inventory_panel()
+	_play_sfx("ui")
 
 @rpc("authority", "call_local", "reliable")
 func sync_ship_upgrades(upgrades: Dictionary) -> void:
@@ -350,7 +351,7 @@ func _on_server_disconnected() -> void:
 func _on_peer_connected(peer_id: int) -> void:
 	if not multiplayer.is_server() or not session_live:
 		return
-	rpc_id(peer_id, "receive_session_config", current_map, session_seed, quota, credits, round_index, collected)
+	rpc_id(peer_id, "receive_session_config", current_map, session_seed, quota, credits, round_index, collected, _collected_item_ids())
 	for existing_id in players.keys():
 		var existing: Node3D = players[existing_id]
 		if is_instance_valid(existing):
@@ -405,6 +406,9 @@ func _start_session_world() -> void:
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
 func _clear_world() -> void:
+	for dropped in get_tree().get_nodes_in_group("dropped_items"):
+		if is_instance_valid(dropped):
+			dropped.queue_free()
 	if has_node("GeneratedWorld"):
 		var old_world := get_node("GeneratedWorld")
 		remove_child(old_world)
@@ -537,6 +541,7 @@ func sync_loot_count(new_count: int, new_credits: int) -> void:
 	collected = new_count
 	credits = new_credits
 	_update_hud()
+	_play_sfx("pickup")
 
 @rpc("authority", "call_local", "reliable")
 func remove_loot(item_id: String) -> void:
@@ -570,6 +575,7 @@ func _server_extract(player_id: int) -> void:
 
 @rpc("authority", "call_local", "reliable")
 func round_complete(total_credits: int, completed_round: int) -> void:
+	_play_sfx("ui")
 	credits = total_credits
 	round_index = completed_round
 	round_finished = true
@@ -635,6 +641,7 @@ func server_enemy_attack(player_id: int, damage: float) -> void:
 
 @rpc("authority", "call_local", "reliable")
 func player_damaged(player_id: int, damage: float) -> void:
+	_play_sfx("impact")
 	if players.has(player_id) and is_instance_valid(players[player_id]):
 		players[player_id].apply_damage(damage)
 	if player_id == multiplayer.get_unique_id():
