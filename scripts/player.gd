@@ -14,6 +14,8 @@ var network_clock: float = 0.0
 var bob_clock: float = 0.0
 var is_dead: bool = false
 var flashlight_charge: float = 100.0
+var move_speed_multiplier: float = 1.0
+var damage_resistance: float = 0.0
 var body_visual: Node3D
 var left_arm: Node3D
 var right_arm: Node3D
@@ -180,9 +182,9 @@ func _physics_process(delta: float) -> void:
 	var local_direction := Vector3(move_input.x, 0, move_input.y)
 	var direction := (global_transform.basis * local_direction).normalized()
 	var sprinting := Input.is_action_pressed("sprint") or _mobile_down("sprint")
-	var speed := 4.1
+	var speed := 4.1 * move_speed_multiplier
 	if sprinting and move_input.length() > 0.1 and stamina > 2.0:
-		speed = 6.4
+		speed = 6.4 * move_speed_multiplier
 		stamina = maxf(0.0, stamina - 27.0 * delta)
 	else:
 		stamina = minf(100.0, stamina + 17.0 * delta)
@@ -332,7 +334,8 @@ func client_receive_transform(pos: Vector3, yaw: float, pitch: float) -> void:
 func apply_damage(amount: float) -> void:
 	if is_dead:
 		return
-	health = maxf(0.0, health - amount)
+	var reduced_damage := amount * (1.0 - clampf(damage_resistance, 0.0, 0.5))
+	health = maxf(0.0, health - reduced_damage)
 	if health <= 0.0:
 		is_dead = true
 		velocity = Vector3.ZERO
