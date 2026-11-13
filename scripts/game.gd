@@ -938,7 +938,7 @@ func _open_settings() -> void:
 	master_slider.step = 0.05
 	master_slider.value = float(settings_config.get_value("audio", "master", 0.85))
 	stack.add_child(master_slider)
-	stack.add_child(_label("MUSIC VOLUME", 10, Color(0.36, 0.79, 0.78)))
+	stack.add_child(_label("MUSIC / AMBIENCE VOLUME", 10, Color(0.36, 0.79, 0.78)))
 	var music_slider := HSlider.new()
 	music_slider.min_value = 0.0
 	music_slider.max_value = 1.0
