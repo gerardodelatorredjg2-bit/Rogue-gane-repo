@@ -17,6 +17,26 @@ var body_visual: Node3D
 var left_arm: Node3D
 var right_arm: Node3D
 
+
+var emote_name: String = ""
+var emote_time: float = 0.0
+var name_tag: Label3D
+
+func set_player_name(value: String) -> void:
+	if is_instance_valid(name_tag):
+		name_tag.text = value.substr(0, 18)
+
+func play_emote(value: String) -> void:
+	if not is_multiplayer_authority() or is_dead:
+		return
+	if velocity.length() > 0.35:
+		return
+	emote_name = value
+	emote_time = 2.2
+	if game and game.has_method("set_prompt"):
+		game.set_prompt("CREW EMOTE  //  " + value.to_upper())
+
+
 func _ready() -> void:
 	add_to_group("players")
 	set_multiplayer_authority(player_id)
@@ -30,6 +50,9 @@ func _ready() -> void:
 	collider.position.y = 0.9
 	add_child(collider)
 	_build_character()
+	var profile := ConfigFile.new()
+	profile.load("user://rogue_settings.cfg")
+	set_player_name(str(profile.get_value("player", "name", "CREWMATE")))
 	body_visual.visible = not is_multiplayer_authority()
 	view_camera = Camera3D.new()
 	view_camera.name = "ViewCamera"
@@ -61,6 +84,13 @@ func _build_character() -> void:
 	_add_box(body_visual, Vector3(0, 0.51, -0.015), Vector3(0.36, 0.30, 0.32), dark)
 	_add_box(body_visual, Vector3(0, 0.53, -0.19), Vector3(0.25, 0.10, 0.035), visor)
 	_add_box(body_visual, Vector3(0, -0.38, 0), Vector3(0.42, 0.14, 0.34), dark)
+	name_tag = Label3D.new()
+	name_tag.position = Vector3(0, 1.12, 0)
+	name_tag.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	name_tag.font_size = 32
+	name_tag.pixel_size = 0.004
+	name_tag.modulate = Color(0.45, 0.96, 0.86)
+	body_visual.add_child(name_tag)
 	left_arm = _make_arm(body_visual, Vector3(-0.40, 0.05, 0), suit)
 	right_arm = _make_arm(body_visual, Vector3(0.40, 0.05, 0), suit)
 	_add_box(body_visual, Vector3(-0.15, -0.75, 0), Vector3(0.19, 0.48, 0.22), suit)
@@ -141,6 +171,25 @@ func _physics_process(delta: float) -> void:
 		if left_arm:
 			left_arm.rotation.x = sin(bob_clock) * 0.18
 			right_arm.rotation.x = -sin(bob_clock) * 0.18
+		if emote_time > 0.0:
+			emote_time = maxf(0.0, emote_time - delta)
+			match emote_name:
+				"dance":
+					body_visual.rotation.y = sin(Time.get_ticks_msec() * 0.012) * 0.28
+					left_arm.rotation.z = sin(Time.get_ticks_msec() * 0.015) * 0.9 - 0.45
+					right_arm.rotation.z = -sin(Time.get_ticks_msec() * 0.015) * 0.9 + 0.45
+				"wave":
+					body_visual.rotation.y = 0.0
+					right_arm.rotation.z = -1.25 + sin(Time.get_ticks_msec() * 0.025) * 0.38
+				"cheer":
+					body_visual.rotation.y = 0.0
+					left_arm.rotation.z = 1.0
+					right_arm.rotation.z = -1.0
+			if emote_time <= 0.0:
+				emote_name = ""
+				body_visual.rotation.y = 0.0
+				left_arm.rotation.z = 0.0
+				right_arm.rotation.z = 0.0
 	network_clock += delta
 	if network_clock >= 0.10:
 		network_clock = 0.0
