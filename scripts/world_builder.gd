@@ -29,6 +29,7 @@ var root: Node3D
 var rng := RandomNumberGenerator.new()
 var accent: Color
 var dark: Color
+var kenney_cache: Dictionary = {}
 
 func build(parent: Node, map_index: int, seed: int) -> Dictionary:
 	rng.seed = seed
@@ -39,12 +40,14 @@ func build(parent: Node, map_index: int, seed: int) -> Dictionary:
 	parent.add_child(root)
 	_add_environment(map_index)
 	_make_box("MainFloor", Vector3(0, -0.55, 0), Vector3(48, 1.0, 48), _mat(dark, 0.78, 0.9))
-	_make_box("NorthBulkhead", Vector3(0, 2.2, -24), Vector3(48, 5.5, 0.8), _mat(Color(0.14, 0.18, 0.2), 0.65, 0.5))
-	_make_box("SouthBulkhead", Vector3(0, 2.2, 24), Vector3(48, 5.5, 0.8), _mat(Color(0.14, 0.18, 0.2), 0.65, 0.5))
-	_make_box("WestBulkhead", Vector3(-24, 2.2, 0), Vector3(0.8, 5.5, 48), _mat(Color(0.14, 0.18, 0.2), 0.65, 0.5))
-	_make_box("EastBulkhead", Vector3(24, 2.2, 0), Vector3(0.8, 5.5, 48), _mat(Color(0.14, 0.18, 0.2), 0.65, 0.5))
+	var industrial_wall := _industrial_material()
+	_make_box("NorthBulkhead", Vector3(0, 2.2, -24), Vector3(48, 5.5, 0.8), industrial_wall)
+	_make_box("SouthBulkhead", Vector3(0, 2.2, 24), Vector3(48, 5.5, 0.8), industrial_wall)
+	_make_box("WestBulkhead", Vector3(-24, 2.2, 0), Vector3(0.8, 5.5, 48), industrial_wall)
+	_make_box("EastBulkhead", Vector3(24, 2.2, 0), Vector3(0.8, 5.5, 48), industrial_wall)
 	_build_corridors()
 	_build_props(map_index)
+	_build_kenney_props(map_index)
 	_build_lights()
 	var exit_pos := Vector3(0, 0, 10.5)
 	_build_extraction(exit_pos)
@@ -100,7 +103,7 @@ func _add_environment(map_index: int) -> void:
 	root.add_child(sun)
 
 func _build_corridors() -> void:
-	var wall_mat := _mat(Color(0.16, 0.20, 0.22), 0.78, 0.55)
+	var wall_mat := _industrial_material()
 	for x in [-10.0, 0.0, 10.0]:
 		_make_box("SupportColumn", Vector3(x, 2.0, -1), Vector3(0.75, 4.0, 0.75), wall_mat)
 	for z in [-11.0, 0.0, 11.0]:
@@ -139,6 +142,63 @@ func _build_props(map_index: int) -> void:
 	elif map_index == 5:
 		for i in range(6):
 			_make_cylinder(Vector3(-17 + i * 6.8, 0.8, 4), 0.66, 1.6, _mat(Color(0.31, 0.15, 0.12), 0.65, 0.4))
+
+
+func _industrial_material() -> StandardMaterial3D:
+	var mat := _mat(Color(0.74, 0.78, 0.76), 0.58, 0.82)
+	var diffuse_path := "res://assets/textures/industrial/rusty_painted_metal_diff_1k.jpg"
+	var normal_path := "res://assets/textures/industrial/rusty_painted_metal_nor_gl_1k.jpg"
+	var rough_path := "res://assets/textures/industrial/rusty_painted_metal_rough_1k.jpg"
+	if ResourceLoader.exists(diffuse_path):
+		mat.albedo_texture = load(diffuse_path) as Texture2D
+		mat.uv1_scale = Vector3(3.0, 3.0, 1.0)
+	if ResourceLoader.exists(normal_path):
+		mat.normal_enabled = true
+		mat.normal_texture = load(normal_path) as Texture2D
+		mat.normal_scale = 0.38
+	if ResourceLoader.exists(rough_path):
+		mat.roughness_texture = load(rough_path) as Texture2D
+		mat.roughness = 0.82
+	return mat
+
+func _build_kenney_props(map_index: int) -> void:
+	# Modular, self-contained Kenney Space Kit models add authored silhouettes
+	# and material detail while the original collision layout remains unchanged.
+	var generator_points := [
+		Vector3(-15, 0, -7), Vector3(14, 0, -11),
+		Vector3(-17, 0, 12), Vector3(17, 0, 4)
+	]
+	for i in range(generator_points.size()):
+		_add_kenney_model("machine-generator", generator_points[i], 1.25, float(i) * 0.65)
+	_add_kenney_model("machine-wireless", Vector3(8, 0, -15), 1.15, 0.4 + float(map_index) * 0.3)
+	_add_kenney_model("barrels", Vector3(-18, 0, -1), 1.15, 0.15)
+	_add_kenney_model("barrels", Vector3(17, 0, -17), 1.05, 1.2)
+	_add_kenney_model("pipe-straight", Vector3(-20.5, 2.4, -9), 1.1, PI * 0.5)
+	_add_kenney_model("pipe-straight", Vector3(20.5, 2.4, 7), 1.1, PI * 0.5)
+	_add_kenney_model("corridor-detailed", Vector3(0, 0, -18.0), 0.72, PI)
+	if map_index == 2 or map_index == 5:
+		_add_kenney_model("craft-cargoa", Vector3(12, 0, 13), 1.2, PI * 0.5)
+	if map_index == 0 or map_index == 4:
+		_add_kenney_model("astronauta", Vector3(-17, 0, 8), 1.2, PI * 0.5)
+
+func _add_kenney_model(model_name: String, position: Vector3, scale_value: float, yaw: float) -> void:
+	var path := "res://assets/models/kenney/%s.glb" % model_name
+	if not ResourceLoader.exists(path):
+		return
+	var packed: PackedScene = kenney_cache.get(model_name)
+	if packed == null:
+		packed = load(path) as PackedScene
+		if packed == null:
+			return
+		kenney_cache[model_name] = packed
+	var instance := packed.instantiate() as Node3D
+	if instance == null:
+		return
+	instance.name = "Kenney_" + model_name
+	instance.position = position
+	instance.rotation.y = yaw
+	instance.scale = Vector3.ONE * scale_value
+	root.add_child(instance)
 
 func _build_lights() -> void:
 	for p in [Vector3(-16, 3.0, -14), Vector3(16, 3.0, -14), Vector3(-16, 3.0, 14), Vector3(16, 3.0, 14), Vector3(0, 3.0, 0)]:
