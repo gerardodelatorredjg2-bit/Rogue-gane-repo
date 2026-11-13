@@ -5,6 +5,7 @@ var player_id: int = 1
 var game: Node
 var view_camera: Camera3D
 var flashlight: SpotLight3D
+var flashlight_level: int = 0
 var health: float = 100.0
 var stamina: float = 100.0
 var mobile_buttons: Dictionary = {}
@@ -16,6 +17,8 @@ var is_dead: bool = false
 var body_visual: Node3D
 var left_arm: Node3D
 var right_arm: Node3D
+var emote_id: int = 0
+var emote_time: float = 0.0
 
 func _ready() -> void:
 	add_to_group("players")
@@ -136,6 +139,9 @@ func _physics_process(delta: float) -> void:
 		velocity.y = 6.0
 	move_and_slide()
 	bob_clock += delta * (10.0 if move_input.length() > 0.1 else 2.2)
+	if emote_time > 0.0:
+		emote_time = maxf(0.0, emote_time - delta)
+		_animate_emote()
 	if body_visual:
 		body_visual.position.y = 0.92 + (sin(bob_clock) * 0.025 if move_input.length() > 0.1 else 0.0)
 		if left_arm:
@@ -147,8 +153,54 @@ func _physics_process(delta: float) -> void:
 		_send_network_state()
 	if Input.is_action_just_pressed("interact") or consume_mobile_action("interact_once"):
 		_interact()
+	if Input.is_action_just_pressed("inventory") and game and game.has_method("open_inventory"):
+		game.call("open_inventory")
 	if Input.is_action_just_pressed("flashlight") or consume_mobile_action("flashlight_once"):
 		flashlight.visible = not flashlight.visible
+	if Input.is_action_just_pressed("emote_dance") or consume_mobile_action("emote_dance"):
+		play_emote(1)
+	if Input.is_action_just_pressed("emote_wave") or consume_mobile_action("emote_wave"):
+		play_emote(2)
+	if Input.is_action_just_pressed("emote_robot") or consume_mobile_action("emote_robot"):
+		play_emote(3)
+
+func upgrade_flashlight() -> void:
+	flashlight_level = mini(2, flashlight_level + 1)
+	if flashlight:
+		flashlight.spot_range = 19.0 + flashlight_level * 5.0
+		flashlight.light_energy = 1.65 + flashlight_level * 0.45
+		flashlight.spot_angle = 38.0 + flashlight_level * 3.0
+
+func play_emote(which: int) -> void:
+	if which < 1 or which > 3 or not is_multiplayer_authority():
+		return
+	emote_id = which
+	emote_time = 2.8
+	body_visual.visible = true
+	_animate_emote()
+
+func _animate_emote() -> void:
+	if not body_visual or not left_arm or not right_arm:
+		return
+	var t := 2.8 - emote_time
+	match emote_id:
+		1:
+			left_arm.rotation.z = sin(t * 10.0) * 0.95
+			right_arm.rotation.z = -sin(t * 10.0) * 0.95
+			body_visual.rotation.y = sin(t * 5.0) * 0.28
+		2:
+			left_arm.rotation.z = -0.15
+			right_arm.rotation.z = -1.8 + sin(t * 8.0) * 0.35
+			body_visual.rotation.y = -0.12
+		3:
+			left_arm.rotation.z = sin(t * 12.0) * 0.5
+			right_arm.rotation.z = -sin(t * 12.0) * 0.5
+			body_visual.rotation.y = sin(t * 12.0) * 0.18
+	if emote_time <= 0.0:
+		left_arm.rotation.z = 0.0
+		right_arm.rotation.z = 0.0
+		body_visual.rotation.y = 0.0
+		body_visual.visible = not is_multiplayer_authority()
 
 func _process(_delta: float) -> void:
 	if is_multiplayer_authority() and game and game.has_method("set_local_player_status"):
@@ -175,6 +227,12 @@ func _unhandled_input(event: InputEvent) -> void:
 		_apply_look(event.relative * 1.0)
 	elif event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	elif event is InputEventKey and event.pressed and event.keycode == KEY_1:
+		play_emote(1)
+	elif event is InputEventKey and event.pressed and event.keycode == KEY_2:
+		play_emote(2)
+	elif event is InputEventKey and event.pressed and event.keycode == KEY_3:
+		play_emote(3)
 	elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		if not OS.has_feature("mobile") and Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
 			Input.mouse_mode = Input.MOUSE_MODE_CAPTURED

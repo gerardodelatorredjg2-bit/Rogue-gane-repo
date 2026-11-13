@@ -43,10 +43,13 @@ var quota_bar: ProgressBar
 var threat_label: Label
 var hud_scan_clock: float = 0.0
 var terminal_panel: PanelContainer
+var overlay_panel: PanelContainer
+var player_name: String = "CREWMATE"
 
 func _ready() -> void:
 	Engine.max_fps = 30 if OS.has_feature("mobile") else 60
 	_configure_input()
+	_load_user_settings()
 	_create_canvas()
 	_show_lobby()
 	set_process(true)
@@ -62,6 +65,16 @@ func _process(delta: float) -> void:
 			hud_scan_clock = 0.0
 			_update_threat_indicator()
 
+func _load_user_settings() -> void:
+	var config := ConfigFile.new()
+	if config.load("user://rogue_settings.cfg") != OK:
+		return
+	player_name = str(config.get_value("player", "name", "CREWMATE"))
+	var bus := AudioServer.get_bus_index("Master")
+	if bus >= 0:
+		AudioServer.set_bus_volume_db(bus, linear_to_db(maxf(0.001, float(config.get_value("audio", "volume", 0.8)))))
+	Engine.max_fps = [30, 45, 60][clampi(int(config.get_value("video", "quality", 0)), 0, 2)]
+
 func _configure_input() -> void:
 	_add_key_action("move_forward", KEY_W)
 	_add_key_action("move_back", KEY_S)
@@ -71,6 +84,10 @@ func _configure_input() -> void:
 	_add_key_action("sprint", KEY_SHIFT)
 	_add_key_action("interact", KEY_E)
 	_add_key_action("flashlight", KEY_F)
+	_add_key_action("inventory", KEY_I)
+	_add_key_action("emote_dance", KEY_1)
+	_add_key_action("emote_wave", KEY_2)
+	_add_key_action("emote_robot", KEY_3)
 
 func _add_key_action(action: String, key: Key) -> void:
 	if not InputMap.has_action(action):
@@ -184,6 +201,9 @@ func _show_lobby(message: String = "ALL SYSTEMS NOMINAL  //  LOCAL NETWORK READY
 	solo_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	solo_button.pressed.connect(_play_solo)
 	stack.add_child(solo_button)
+	var settings_button := _button("⚙  SETTINGS", false)
+	settings_button.pressed.connect(open_settings)
+	stack.add_child(settings_button)
 	lobby_status = _label(message, 11, Color(0.52, 0.72, 0.72))
 	lobby_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	lobby_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -324,7 +344,8 @@ func _clear_world() -> void:
 
 func _spawn_initial_enemies() -> void:
 	var locations: Array = world_info.get("enemy_spawns", [])
-	for i in range(mini(3, locations.size())):
+	var enemy_count := mini(locations.size(), mini(4, 2 + int(round_index / 2)))
+	for i in range(enemy_count):
 		receive_enemy_spawn.rpc("hunter_%02d" % i, locations[i], i % 3)
 
 func _spawn_player(peer_id: int, pos: Vector3) -> void:
@@ -334,6 +355,9 @@ func _spawn_player(peer_id: int, pos: Vector3) -> void:
 	player.name = "Player_%d" % peer_id
 	player.player_id = peer_id
 	player.game = self
+	var config := ConfigFile.new()
+	if config.load("user://rogue_settings.cfg") == OK:
+		player.look_sensitivity = float(config.get_value("controls", "sensitivity", 0.0022))
 	add_child(player)
 	player.global_position = pos
 	players[peer_id] = player
@@ -386,6 +410,9 @@ func receive_enemy_spawn(enemy_id: String, pos: Vector3, variant: int) -> void:
 	enemy.variant = variant
 	enemy.game = self
 	add_child(enemy)
+	var difficulty_scale := 1.0 + minf(0.65, float(maxi(0, round_index - 1)) * 0.055)
+	enemy.movement_speed *= difficulty_scale
+	enemy.detection_range += minf(8.0, float(maxi(0, round_index - 1)) * 0.65)
 	enemy.global_position = pos
 	enemies[enemy_id] = enemy
 
@@ -444,7 +471,11 @@ func sync_loot_count(new_count: int, new_credits: int) -> void:
 func remove_loot(item_id: String) -> void:
 	for node in get_tree().get_nodes_in_group("loot"):
 		if node.item_id == item_id:
-			node.queue_free()
+			var pickup_tween := create_tween()
+			pickup_tween.set_parallel(true)
+			pickup_tween.tween_property(node, "scale", Vector3.ZERO, 0.22).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
+			pickup_tween.tween_property(node, "position:y", node.position.y + 0.65, 0.22)
+			pickup_tween.chain().tween_callback(node.queue_free)
 			break
 
 func request_extract(player_id: int) -> void:
@@ -671,7 +702,139 @@ func _create_hud() -> void:
 	prompt_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	ui_root.add_child(prompt_label)
 	_create_mobile_controls()
+	_create_quick_actions()
 	_update_hud()
+
+func _create_quick_actions() -> void:
+	var inventory_button := _button("BAG  [I]", false)
+	inventory_button.anchor_left = 0.36
+	inventory_button.anchor_top = 0.91
+	inventory_button.anchor_right = 0.48
+	inventory_button.anchor_bottom = 0.98
+	ui_root.add_child(inventory_button)
+	inventory_button.pressed.connect(open_inventory)
+	var settings_button := _button("⚙", false)
+	settings_button.anchor_left = 0.50
+	settings_button.anchor_top = 0.91
+	settings_button.anchor_right = 0.58
+	settings_button.anchor_bottom = 0.98
+	ui_root.add_child(settings_button)
+	settings_button.pressed.connect(open_settings)
+	var emote_button := _button("EMOTE", false)
+	emote_button.anchor_left = 0.60
+	emote_button.anchor_top = 0.91
+	emote_button.anchor_right = 0.72
+	emote_button.anchor_bottom = 0.98
+	ui_root.add_child(emote_button)
+	emote_button.pressed.connect(open_emotes)
+
+func open_inventory() -> void:
+	_show_overlay("CREW INVENTORY", "SALVAGE RECOVERED: %02d / %02d\nCREDITS: ¢%04d\nSUIT INTEGRITY: %d%%\nSTAMINA CELL: %d%%\n\nRECOVERED CARGO IS AUTOMATICALLY SECURED." % [collected, quota, credits, int(_local_player().health) if _local_player() else 100, int(_local_player().stamina) if _local_player() else 100], ["CLOSE"], [])
+
+func open_emotes() -> void:
+	var player := _local_player()
+	if player == null:
+		return
+	_show_overlay("CREW EMOTES", "Quick signals for the crew. These are cosmetic.", ["DANCE", "WAVE", "ROBOT", "CLOSE"], [func(): player.play_emote(1), func(): player.play_emote(2), func(): player.play_emote(3)])
+
+func open_settings() -> void:
+	if is_instance_valid(overlay_panel):
+		overlay_panel.queue_free()
+	var config := ConfigFile.new()
+	config.load("user://rogue_settings.cfg")
+	var saved_name := str(config.get_value("player", "name", player_name))
+	var saved_volume := float(config.get_value("audio", "volume", 0.8))
+	var saved_sensitivity := float(config.get_value("controls", "sensitivity", 0.0022))
+	overlay_panel = PanelContainer.new()
+	overlay_panel.anchor_left = 0.5
+	overlay_panel.anchor_top = 0.5
+	overlay_panel.anchor_right = 0.5
+	overlay_panel.anchor_bottom = 0.5
+	overlay_panel.offset_left = -210
+	overlay_panel.offset_top = -245
+	overlay_panel.offset_right = 210
+	overlay_panel.offset_bottom = 245
+	overlay_panel.add_theme_stylebox_override("panel", _panel_style(Color(0.012, 0.035, 0.043, 0.98), Color(0.12, 0.83, 0.72)))
+	ui_root.add_child(overlay_panel)
+	var stack := VBoxContainer.new()
+	stack.add_theme_constant_override("separation", 9)
+	overlay_panel.add_child(stack)
+	stack.add_child(_label("SYSTEM SETTINGS", 20, Color(0.45, 0.98, 0.84)))
+	stack.add_child(_label("CALLSIGN", 10, Color(0.55, 0.82, 0.82)))
+	var name_edit := LineEdit.new()
+	name_edit.text = saved_name
+	name_edit.max_length = 18
+	name_edit.placeholder_text = "Your crew name"
+	stack.add_child(name_edit)
+	stack.add_child(_label("MASTER VOLUME", 10, Color(0.55, 0.82, 0.82)))
+	var volume_slider := HSlider.new()
+	volume_slider.min_value = 0.0
+	volume_slider.max_value = 1.0
+	volume_slider.step = 0.05
+	volume_slider.value = saved_volume
+	stack.add_child(volume_slider)
+	stack.add_child(_label("LOOK SENSITIVITY", 10, Color(0.55, 0.82, 0.82)))
+	var sensitivity_slider := HSlider.new()
+	sensitivity_slider.min_value = 0.001
+	sensitivity_slider.max_value = 0.006
+	sensitivity_slider.step = 0.0002
+	sensitivity_slider.value = saved_sensitivity
+	stack.add_child(sensitivity_slider)
+	stack.add_child(_label("PERFORMANCE PRESET", 10, Color(0.55, 0.82, 0.82)))
+	var quality := OptionButton.new()
+	quality.add_item("LOW  //  30 FPS")
+	quality.add_item("BALANCED  //  45 FPS")
+	quality.add_item("HIGH  //  60 FPS")
+	quality.select(int(config.get_value("video", "quality", 0)))
+	stack.add_child(quality)
+	var save := _button("SAVE SETTINGS", true)
+	save.pressed.connect(func():
+		player_name = name_edit.text.strip_edges()
+		if player_name.is_empty(): player_name = "CREWMATE"
+		config.set_value("player", "name", player_name)
+		config.set_value("audio", "volume", volume_slider.value)
+		config.set_value("controls", "sensitivity", sensitivity_slider.value)
+		config.set_value("video", "quality", quality.selected)
+		config.save("user://rogue_settings.cfg")
+		var bus := AudioServer.get_bus_index("Master")
+		if bus >= 0: AudioServer.set_bus_volume_db(bus, linear_to_db(maxf(0.001, volume_slider.value)))
+		Engine.max_fps = [30, 45, 60][quality.selected]
+		var local := _local_player()
+		if local: local.look_sensitivity = sensitivity_slider.value
+		set_prompt("SETTINGS SAVED  //  %s" % player_name)
+		if is_instance_valid(overlay_panel): overlay_panel.queue_free()
+		overlay_panel = null
+	)
+	stack.add_child(save)
+	var close := _button("CLOSE", false)
+	close.pressed.connect(func(): overlay_panel.queue_free(); overlay_panel = null)
+	stack.add_child(close)
+
+func _show_overlay(title_text: String, body_text: String, button_labels: Array, actions: Array) -> void:
+	if is_instance_valid(overlay_panel): overlay_panel.queue_free()
+	overlay_panel = PanelContainer.new()
+	overlay_panel.anchor_left = 0.5
+	overlay_panel.anchor_top = 0.5
+	overlay_panel.anchor_right = 0.5
+	overlay_panel.anchor_bottom = 0.5
+	overlay_panel.offset_left = -190
+	overlay_panel.offset_top = -155
+	overlay_panel.offset_right = 190
+	overlay_panel.offset_bottom = 155
+	overlay_panel.add_theme_stylebox_override("panel", _panel_style(Color(0.012, 0.035, 0.043, 0.98), Color(0.12, 0.83, 0.72)))
+	ui_root.add_child(overlay_panel)
+	var stack := VBoxContainer.new()
+	stack.add_theme_constant_override("separation", 10)
+	overlay_panel.add_child(stack)
+	stack.add_child(_label(title_text, 18, Color(0.45, 0.98, 0.84)))
+	var detail := _label(body_text, 13, Color(0.75, 0.87, 0.87))
+	detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	stack.add_child(detail)
+	for i in range(button_labels.size()):
+		var button := _button(str(button_labels[i]), i == 0)
+		if i < actions.size(): button.pressed.connect(actions[i])
+		else: button.pressed.connect(func(): overlay_panel.queue_free(); overlay_panel = null)
+		stack.add_child(button)
 
 func _make_hud_bar(fill_color: Color) -> ProgressBar:
 	var bar := ProgressBar.new()
@@ -740,6 +903,9 @@ func open_ship_terminal(player_id: int) -> void:
 	var recharge := _button("RECHARGE STAMINA  //  15 CR", false)
 	recharge.pressed.connect(func(): request_ship_purchase("stamina", player_id))
 	stack.add_child(recharge)
+	var lamp := _button("LANTERN OVERDRIVE  //  30 CR", false)
+	lamp.pressed.connect(func(): request_ship_purchase("lamp", player_id))
+	stack.add_child(lamp)
 	var close := _button("CLOSE TERMINAL", false)
 	close.pressed.connect(func():
 		if is_instance_valid(terminal_panel):
@@ -766,7 +932,7 @@ func _server_ship_purchase(item_id: String, player_id: int) -> void:
 	var player: Node3D = players[player_id]
 	if player.global_position.distance_to(Vector3(0, 0, 17)) > 5.0:
 		return
-	var cost := 25 if item_id == "repair" else (15 if item_id == "stamina" else -1)
+	var cost := 25 if item_id == "repair" else (15 if item_id == "stamina" else (30 if item_id == "lamp" else -1))
 	if cost < 0 or credits < cost:
 		if player_id == multiplayer.get_unique_id():
 			set_prompt("INSUFFICIENT CREDITS OR INVALID SERVICE")
@@ -778,8 +944,12 @@ func _server_ship_purchase(item_id: String, player_id: int) -> void:
 	var new_stamina := float(player.get("stamina"))
 	if item_id == "repair":
 		new_health = minf(100.0, new_health + 50.0)
-	else:
+	elif item_id == "stamina":
 		new_stamina = 100.0
+	elif item_id == "lamp" and int(player.get("flashlight_level")) >= 2:
+		if player_id == multiplayer.get_unique_id(): set_prompt("LANTERN ALREADY AT MAXIMUM OUTPUT")
+		else: rpc_id(player_id, "ship_purchase_denied", "LANTERN ALREADY AT MAXIMUM OUTPUT")
+		return
 	sync_ship_purchase.rpc(credits, player_id, new_health, new_stamina, item_id)
 
 @rpc("authority", "call_remote", "reliable")
@@ -792,8 +962,11 @@ func sync_ship_purchase(new_credits: int, player_id: int, new_health: float, new
 	if players.has(player_id) and is_instance_valid(players[player_id]):
 		players[player_id].health = new_health
 		players[player_id].stamina = new_stamina
+		if item_id == "lamp" and players[player_id].has_method("upgrade_flashlight"):
+			players[player_id].upgrade_flashlight()
 	_update_hud()
-	set_prompt("SERVICE COMPLETE  //  %s" % ("SUIT PATCHED" if item_id == "repair" else "STAMINA CELL RECHARGED"))
+	var service_name := "SUIT PATCHED" if item_id == "repair" else ("STAMINA CELL RECHARGED" if item_id == "stamina" else "LANTERN OVERDRIVE INSTALLED")
+	set_prompt("SERVICE COMPLETE  //  %s" % service_name)
 	if player_id == multiplayer.get_unique_id() and is_instance_valid(terminal_panel):
 		terminal_panel.queue_free()
 		terminal_panel = null
@@ -813,6 +986,7 @@ func _create_mobile_controls() -> void:
 	_touch_button("USE", 0.86, 0.80, 0.94, 0.91, "interact_once", false)
 	_touch_button("LAMP", 0.86, 0.66, 0.94, 0.77, "flashlight_once", false)
 	_touch_button("JUMP", 0.76, 0.84, 0.84, 0.94, "jump")
+	_touch_button("DANCE", 0.70, 0.64, 0.79, 0.73, "emote_dance", false)
 	if movement:
 		movement.tooltip_text = "Movement pad"
 
