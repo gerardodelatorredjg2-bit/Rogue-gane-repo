@@ -467,7 +467,11 @@ func sync_loot_count(new_count: int, new_credits: int) -> void:
 func remove_loot(item_id: String) -> void:
 	for node in get_tree().get_nodes_in_group("loot"):
 		if node.item_id == item_id:
-			node.queue_free()
+			var pickup_tween := create_tween()
+			pickup_tween.set_parallel(true)
+			pickup_tween.tween_property(node, "scale", Vector3.ZERO, 0.22).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
+			pickup_tween.tween_property(node, "position:y", node.position.y + 0.65, 0.22)
+			pickup_tween.chain().tween_callback(node.queue_free)
 			break
 
 func request_extract(player_id: int) -> void:
