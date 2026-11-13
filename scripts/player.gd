@@ -30,6 +30,9 @@ var emote_name: String = ""
 var emote_time: float = 0.0
 var name_tag: Label3D
 
+func get_player_name() -> String:
+	return name_tag.text if is_instance_valid(name_tag) else "CREW %02d" % player_id
+
 func set_player_name(value: String) -> void:
 	if is_instance_valid(name_tag):
 		name_tag.text = value.substr(0, 18)
