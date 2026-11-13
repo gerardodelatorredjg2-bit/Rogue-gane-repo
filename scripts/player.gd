@@ -20,6 +20,8 @@ var invert_look_y: bool = false
 var body_visual: Node3D
 var left_arm: Node3D
 var right_arm: Node3D
+var left_leg: Node3D
+var right_leg: Node3D
 
 
 var emote_name: String = ""
@@ -110,11 +112,34 @@ func _build_character() -> void:
 	add_child(body_visual)
 	var suit := _material(Color(0.22, 0.30, 0.34), 0.65, 0.4)
 	var dark := _material(Color(0.045, 0.075, 0.09), 0.45, 0.5)
+	var trim := _material(Color(0.10, 0.17, 0.19), 0.72, 0.38)
 	var visor := _material(Color(0.12, 0.82, 0.86), 0.8, 0.2, true)
+	var safety := _material(Color(1.0, 0.42, 0.12), 0.35, 0.3, true)
+	# Pressure suit and layered chest armor.
 	_add_capsule(body_visual, Vector3(0, 0, 0), 0.35, 0.82, suit)
-	_add_box(body_visual, Vector3(0, 0.51, -0.015), Vector3(0.36, 0.30, 0.32), dark)
-	_add_box(body_visual, Vector3(0, 0.53, -0.19), Vector3(0.25, 0.10, 0.035), visor)
-	_add_box(body_visual, Vector3(0, -0.38, 0), Vector3(0.42, 0.14, 0.34), dark)
+	_add_box(body_visual, Vector3(0, 0.08, -0.285), Vector3(0.44, 0.48, 0.075), dark)
+	_add_box(body_visual, Vector3(0, 0.16, -0.33), Vector3(0.28, 0.12, 0.035), trim)
+	_add_box(body_visual, Vector3(0, 0.17, -0.354), Vector3(0.11, 0.06, 0.018), visor)
+	_add_box(body_visual, Vector3(0, -0.36, -0.02), Vector3(0.44, 0.15, 0.34), dark)
+	_add_box(body_visual, Vector3(0, -0.36, -0.205), Vector3(0.22, 0.07, 0.025), safety)
+	# Rounded helmet, wide reflective visor and side comms.
+	_add_sphere(body_visual, Vector3(0, 0.54, -0.02), 0.255, 0.49, dark)
+	_add_box(body_visual, Vector3(0, 0.55, -0.235), Vector3(0.34, 0.15, 0.045), visor)
+	_add_box(body_visual, Vector3(0, 0.655, -0.205), Vector3(0.38, 0.055, 0.085), trim)
+	for side in [-1.0, 1.0]:
+		_add_box(body_visual, Vector3(side * 0.255, 0.53, -0.01), Vector3(0.08, 0.20, 0.22), trim)
+		_add_box(body_visual, Vector3(side * 0.296, 0.53, -0.07), Vector3(0.025, 0.07, 0.07), safety)
+		_add_box(body_visual, Vector3(side * 0.235, 0.21, -0.015), Vector3(0.20, 0.23, 0.27), trim)
+		_add_box(body_visual, Vector3(side * 0.24, 0.22, -0.16), Vector3(0.09, 0.06, 0.025), safety)
+	# Backpack battery and twin status strips.
+	_add_box(body_visual, Vector3(0, 0.10, 0.275), Vector3(0.45, 0.58, 0.24), dark)
+	_add_box(body_visual, Vector3(-0.12, 0.12, 0.405), Vector3(0.08, 0.36, 0.025), visor)
+	_add_box(body_visual, Vector3(0.12, 0.12, 0.405), Vector3(0.08, 0.36, 0.025), safety)
+	# Shoulder joints, gloves and articulated legs.
+	left_arm = _make_arm(body_visual, Vector3(-0.43, 0.12, 0), suit)
+	right_arm = _make_arm(body_visual, Vector3(0.43, 0.12, 0), suit)
+	left_leg = _make_leg(body_visual, Vector3(-0.15, -0.43, 0), suit, trim)
+	right_leg = _make_leg(body_visual, Vector3(0.15, -0.43, 0), suit, trim)
 	name_tag = Label3D.new()
 	name_tag.position = Vector3(0, 1.12, 0)
 	name_tag.billboard = BaseMaterial3D.BILLBOARD_ENABLED
@@ -122,10 +147,6 @@ func _build_character() -> void:
 	name_tag.pixel_size = 0.004
 	name_tag.modulate = Color(0.45, 0.96, 0.86)
 	body_visual.add_child(name_tag)
-	left_arm = _make_arm(body_visual, Vector3(-0.40, 0.05, 0), suit)
-	right_arm = _make_arm(body_visual, Vector3(0.40, 0.05, 0), suit)
-	_add_box(body_visual, Vector3(-0.15, -0.75, 0), Vector3(0.19, 0.48, 0.22), suit)
-	_add_box(body_visual, Vector3(0.15, -0.75, 0), Vector3(0.19, 0.48, 0.22), suit)
 
 func _make_arm(parent: Node3D, pos: Vector3, mat: Material) -> Node3D:
 	var pivot := Node3D.new()
@@ -134,6 +155,28 @@ func _make_arm(parent: Node3D, pos: Vector3, mat: Material) -> Node3D:
 	_add_capsule(pivot, Vector3(0, -0.23, 0), 0.12, 0.50, mat)
 	_add_box(pivot, Vector3(0, -0.48, -0.015), Vector3(0.18, 0.17, 0.18), _material(Color(0.08, 0.15, 0.18), 0.6, 0.35))
 	return pivot
+
+func _make_leg(parent: Node3D, pos: Vector3, suit: Material, trim: Material) -> Node3D:
+	var pivot := Node3D.new()
+	pivot.position = pos
+	parent.add_child(pivot)
+	_add_capsule(pivot, Vector3(0, -0.22, 0), 0.11, 0.48, suit)
+	_add_box(pivot, Vector3(0, -0.19, -0.105), Vector3(0.20, 0.17, 0.06), trim)
+	_add_box(pivot, Vector3(0, -0.49, -0.055), Vector3(0.23, 0.16, 0.34), trim)
+	_add_box(pivot, Vector3(0, -0.49, -0.22), Vector3(0.10, 0.055, 0.025), _material(Color(0.12, 0.82, 0.86), 0.2, 0.28, true))
+	return pivot
+
+func _add_sphere(parent: Node3D, pos: Vector3, radius: float, height: float, mat: Material) -> void:
+	var node := MeshInstance3D.new()
+	var mesh := SphereMesh.new()
+	mesh.radius = radius
+	mesh.height = height
+	mesh.radial_segments = 16
+	mesh.rings = 8
+	node.mesh = mesh
+	node.position = pos
+	node.material_override = mat
+	parent.add_child(node)
 
 func _add_capsule(parent: Node3D, pos: Vector3, radius: float, height: float, mat: Material) -> void:
 	var mesh_node := MeshInstance3D.new()
@@ -206,8 +249,13 @@ func _physics_process(delta: float) -> void:
 	if body_visual:
 		body_visual.position.y = 0.92 + (sin(bob_clock) * 0.025 if move_input.length() > 0.1 else 0.0)
 		if left_arm:
-			left_arm.rotation.x = sin(bob_clock) * 0.18
-			right_arm.rotation.x = -sin(bob_clock) * 0.18
+			var stride := sin(bob_clock) * (0.44 if move_input.length() > 0.1 else 0.035)
+			left_arm.rotation.x = stride
+			right_arm.rotation.x = -stride
+		if left_leg and right_leg:
+			var leg_stride := sin(bob_clock) * (0.50 if move_input.length() > 0.1 else 0.02)
+			left_leg.rotation.x = -leg_stride
+			right_leg.rotation.x = leg_stride
 		if emote_time > 0.0:
 			emote_time = maxf(0.0, emote_time - delta)
 			match emote_name:
@@ -227,6 +275,8 @@ func _physics_process(delta: float) -> void:
 				body_visual.rotation.y = 0.0
 				left_arm.rotation.z = 0.0
 				right_arm.rotation.z = 0.0
+				left_arm.rotation.x = 0.0
+				right_arm.rotation.x = 0.0
 	network_clock += delta
 	if network_clock >= 0.10:
 		network_clock = 0.0
