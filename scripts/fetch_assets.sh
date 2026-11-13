@@ -71,6 +71,10 @@ if ! curl --fail --location --silent --show-error --retry 3 \
   echo "WARNING: Kenney sound archive unavailable; continuing with generated ambience and silent SFX fallback."
   exit 0
 fi
+if ! unzip -tq "$AUDIO_ZIP" >/dev/null 2>&1; then
+  echo "WARNING: Kenney returned an invalid sound archive; continuing with procedural ambience and no imported one-shot SFX."
+  exit 0
+fi
 AUDIO_TMP="${TMPDIR:-/tmp}/kenney-sci-fi-sounds"
 rm -rf "$AUDIO_TMP"
 mkdir -p "$AUDIO_TMP"
