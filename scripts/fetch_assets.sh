@@ -42,10 +42,15 @@ TEXTURE_DIR="assets/textures/industrial"
 TEXTURE_BASE="https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/rusty_painted_metal"
 mkdir -p "$TEXTURE_DIR"
 for map in diff rough; do
-  curl --fail --location --silent --show-error --retry 3 \
+  if curl --fail --location --silent --show-error --retry 3 \
+    --user-agent "RogueMachines-AndroidBuild/1.0 (asset-import)" \
     "$TEXTURE_BASE/rusty_painted_metal_${map}_1k.jpg" \
-    --output "$TEXTURE_DIR/rusty_painted_metal_${map}_1k.jpg"
-  test -s "$TEXTURE_DIR/rusty_painted_metal_${map}_1k.jpg"
+    --output "$TEXTURE_DIR/rusty_painted_metal_${map}_1k.jpg"; then
+    test -s "$TEXTURE_DIR/rusty_painted_metal_${map}_1k.jpg"
+  else
+    echo "WARNING: Poly Haven temporarily blocked the ${map} map; continuing with procedural fallback."
+    rm -f "$TEXTURE_DIR/rusty_painted_metal_${map}_1k.jpg"
+  fi
 done
 cat > "$TEXTURE_DIR/LICENSE-CC0.txt" <<'LICENSE'
 Texture: Rusty Painted Metal
@@ -59,9 +64,13 @@ LICENSE
 AUDIO_DIR="assets/audio/kenney_sci_fi"
 AUDIO_ZIP="${TMPDIR:-/tmp}/kenney_sci-fi-sounds.zip"
 mkdir -p "$AUDIO_DIR"
-curl --fail --location --silent --show-error --retry 3 \
-  "https://kenney.nl/media/pages/assets/sci-fi-sounds/6b296f9ecf-1677589334/kenney_sci-fi-sounds.zip" \
-  --output "$AUDIO_ZIP"
+if ! curl --fail --location --silent --show-error --retry 3 \
+  --user-agent "RogueMachines-AndroidBuild/1.0 (asset-import)" \
+  "https://kenney.nl/media/pages/assets/sci-fi-sounds/6b296f9ecf-1677589334/kenney-sci-fi-sounds.zip" \
+  --output "$AUDIO_ZIP"; then
+  echo "WARNING: Kenney sound archive unavailable; continuing with generated ambience and silent SFX fallback."
+  exit 0
+fi
 AUDIO_TMP="${TMPDIR:-/tmp}/kenney-sci-fi-sounds"
 rm -rf "$AUDIO_TMP"
 mkdir -p "$AUDIO_TMP"
