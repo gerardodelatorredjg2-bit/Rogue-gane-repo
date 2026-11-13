@@ -38,6 +38,10 @@ func _ready() -> void:
 	patrol_target = global_position + Vector3(5, 0, 4)
 	movement_speed = [2.7, 3.5, 2.15][variant % 3]
 	attack_range = 1.55 if variant != 2 else 1.85
+	var contract_day := int(game.round_index) if game and game.get("round_index") != null else 1
+	var escalation := minf(0.42, float(maxi(0, contract_day - 1)) * 0.045)
+	movement_speed *= 1.0 + escalation
+	detection_range += float(maxi(0, contract_day - 1)) * 0.8
 
 func _build_robot() -> void:
 	var accent: Color = COLORS[variant % COLORS.size()]
@@ -146,6 +150,7 @@ func _physics_process(delta: float) -> void:
 		direction.y = 0
 		if direction.length() < attack_range and attack_clock <= 0.0:
 			attack_clock = 1.35
+			velocity += -global_transform.basis.z * 1.8
 			if game and game.has_method("server_enemy_attack"):
 				game.call("server_enemy_attack", int(target.get("player_id")), 12.0 if variant == 1 else 8.0)
 	else:
