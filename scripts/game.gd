@@ -881,6 +881,9 @@ func open_ship_terminal(player_id: int) -> void:
 	var recharge := _button("RECHARGE STAMINA  //  15 CR", false)
 	recharge.pressed.connect(func(): request_ship_purchase("stamina", player_id))
 	stack.add_child(recharge)
+	var lamp := _button("LANTERN OVERDRIVE  //  30 CR", false)
+	lamp.pressed.connect(func(): request_ship_purchase("lamp", player_id))
+	stack.add_child(lamp)
 	var close := _button("CLOSE TERMINAL", false)
 	close.pressed.connect(func():
 		if is_instance_valid(terminal_panel):
@@ -907,7 +910,7 @@ func _server_ship_purchase(item_id: String, player_id: int) -> void:
 	var player: Node3D = players[player_id]
 	if player.global_position.distance_to(Vector3(0, 0, 17)) > 5.0:
 		return
-	var cost := 25 if item_id == "repair" else (15 if item_id == "stamina" else -1)
+	var cost := 25 if item_id == "repair" else (15 if item_id == "stamina" else (30 if item_id == "lamp" else -1))
 	if cost < 0 or credits < cost:
 		if player_id == multiplayer.get_unique_id():
 			set_prompt("INSUFFICIENT CREDITS OR INVALID SERVICE")
@@ -919,7 +922,7 @@ func _server_ship_purchase(item_id: String, player_id: int) -> void:
 	var new_stamina := float(player.get("stamina"))
 	if item_id == "repair":
 		new_health = minf(100.0, new_health + 50.0)
-	else:
+	elif item_id == "stamina":
 		new_stamina = 100.0
 	sync_ship_purchase.rpc(credits, player_id, new_health, new_stamina, item_id)
 
@@ -933,8 +936,11 @@ func sync_ship_purchase(new_credits: int, player_id: int, new_health: float, new
 	if players.has(player_id) and is_instance_valid(players[player_id]):
 		players[player_id].health = new_health
 		players[player_id].stamina = new_stamina
+		if item_id == "lamp" and players[player_id].has_method("upgrade_flashlight"):
+			players[player_id].upgrade_flashlight()
 	_update_hud()
-	set_prompt("SERVICE COMPLETE  //  %s" % ("SUIT PATCHED" if item_id == "repair" else "STAMINA CELL RECHARGED"))
+	var service_name := "SUIT PATCHED" if item_id == "repair" else ("STAMINA CELL RECHARGED" if item_id == "stamina" else "LANTERN OVERDRIVE INSTALLED")
+	set_prompt("SERVICE COMPLETE  //  %s" % service_name)
 	if player_id == multiplayer.get_unique_id() and is_instance_valid(terminal_panel):
 		terminal_panel.queue_free()
 		terminal_panel = null
