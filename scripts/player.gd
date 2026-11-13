@@ -400,7 +400,6 @@ func client_receive_transform(pos: Vector3, yaw: float, pitch: float, current_st
 		return
 	if is_multiplayer_authority():
 		return
-	var old_position := global_position
 	global_position = global_position.lerp(pos, 0.72)
 	rotation.y = yaw
 	view_camera.rotation.x = pitch
