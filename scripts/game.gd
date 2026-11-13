@@ -831,33 +831,54 @@ func _update_threat_indicator() -> void:
 func open_ship_terminal(player_id: int) -> void:
 	if player_id != multiplayer.get_unique_id() or is_instance_valid(terminal_panel):
 		return
+	if is_instance_valid(inventory_panel):
+		inventory_panel.queue_free()
+		inventory_panel = null
 	terminal_panel = PanelContainer.new()
 	terminal_panel.anchor_left = 0.5
 	terminal_panel.anchor_top = 0.5
 	terminal_panel.anchor_right = 0.5
 	terminal_panel.anchor_bottom = 0.5
-	terminal_panel.offset_left = -190
-	terminal_panel.offset_top = -155
-	terminal_panel.offset_right = 190
-	terminal_panel.offset_bottom = 155
-	terminal_panel.add_theme_stylebox_override("panel", _panel_style(Color(0.012, 0.035, 0.043, 0.98), Color(0.12, 0.83, 0.72)))
+	terminal_panel.offset_left = -235
+	terminal_panel.offset_top = -235
+	terminal_panel.offset_right = 235
+	terminal_panel.offset_bottom = 235
+	terminal_panel.add_theme_stylebox_override("panel", _panel_style(Color(0.012, 0.035, 0.043, 0.99), Color(0.12, 0.83, 0.72)))
 	ui_root.add_child(terminal_panel)
+	var outer := MarginContainer.new()
+	outer.add_theme_constant_override("margin_left", 15)
+	outer.add_theme_constant_override("margin_right", 15)
+	outer.add_theme_constant_override("margin_top", 12)
+	outer.add_theme_constant_override("margin_bottom", 12)
+	terminal_panel.add_child(outer)
 	var stack := VBoxContainer.new()
-	stack.add_theme_constant_override("separation", 10)
-	terminal_panel.add_child(stack)
-	var title := _label("DROP-SHIP // SERVICE BAY", 18, Color(0.45, 0.98, 0.84))
+	stack.add_theme_constant_override("separation", 8)
+	outer.add_child(stack)
+	var title := _label("DROP-SHIP // QUARTERMASTER", 19, Color(0.45, 0.98, 0.84))
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	stack.add_child(title)
-	var subtitle := _label("FIELD REPAIRS  /  CREDITS %04d" % credits, 11, Color(0.70, 0.82, 0.82))
+	var subtitle := _label("CREDITS  ¢%04d  //  CONTRACT %02d" % [credits, round_index], 11, Color(0.98, 0.72, 0.32))
 	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	stack.add_child(subtitle)
-	var repair := _button("PATCH SUIT  +50 INTEGRITY  //  25 CR", true)
-	repair.pressed.connect(func(): request_ship_purchase("repair", player_id))
-	stack.add_child(repair)
-	var recharge := _button("RECHARGE STAMINA  //  15 CR", false)
-	recharge.pressed.connect(func(): request_ship_purchase("stamina", player_id))
-	stack.add_child(recharge)
-	var close := _button("CLOSE TERMINAL", false)
+	var levels := _label("HULL %d   CARGO %d   ENGINE %d" % [ship_upgrades.get("hull", 0), ship_upgrades.get("storage", 0), ship_upgrades.get("engine", 0)], 10, Color(0.50, 0.80, 0.82))
+	levels.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	stack.add_child(levels)
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.custom_minimum_size = Vector2(0, 285)
+	stack.add_child(scroll)
+	var list := VBoxContainer.new()
+	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	list.add_theme_constant_override("separation", 6)
+	scroll.add_child(list)
+	for item_id in SHOP_CATALOG.keys():
+		var entry: Dictionary = SHOP_CATALOG[item_id]
+		var row_button := _button("%s  //  ¢%d" % [entry.get("label", item_id), int(entry.get("cost", 0))], str(entry.get("kind")) == "upgrade")
+		row_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var captured_item_id := str(item_id)
+		row_button.pressed.connect(func(): request_ship_purchase(captured_item_id, player_id))
+		list.add_child(row_button)
+	var close := _button("CLOSE QUARTERMASTER", false)
 	close.pressed.connect(func():
 		if is_instance_valid(terminal_panel):
 			terminal_panel.queue_free()
@@ -878,26 +899,49 @@ func server_ship_purchase(item_id: String, player_id: int) -> void:
 	_server_ship_purchase(item_id, player_id)
 
 func _server_ship_purchase(item_id: String, player_id: int) -> void:
-	if round_finished or not players.has(player_id):
+	if round_finished or not players.has(player_id) or not SHOP_CATALOG.has(item_id):
 		return
 	var player: Node3D = players[player_id]
 	if player.global_position.distance_to(Vector3(0, 0, 17)) > 5.0:
 		return
-	var cost := 25 if item_id == "repair" else (15 if item_id == "stamina" else -1)
+	var entry: Dictionary = SHOP_CATALOG[item_id]
+	var cost := int(entry.get("cost", -1))
+	var kind := str(entry.get("kind", ""))
 	if cost < 0 or credits < cost:
-		if player_id == multiplayer.get_unique_id():
-			set_prompt("INSUFFICIENT CREDITS OR INVALID SERVICE")
-		else:
-			rpc_id(player_id, "ship_purchase_denied", "INSUFFICIENT CREDITS OR INVALID SERVICE")
+		_deny_shop_purchase(player_id, "NOT ENOUGH CREDITS")
 		return
-	credits -= cost
+	var inventory: Dictionary = player_inventories.get(player_id, _default_inventory()).duplicate(true)
+	if kind == "item" and _inventory_count(player_id) >= _inventory_slot_limit():
+		_deny_shop_purchase(player_id, "INVENTORY FULL  //  BUY CARGO RACKS")
+		return
 	var new_health := float(player.get("health"))
 	var new_stamina := float(player.get("stamina"))
 	if item_id == "repair":
+		if new_health >= 100.0:
+			_deny_shop_purchase(player_id, "SUIT INTEGRITY ALREADY FULL")
+			return
 		new_health = minf(100.0, new_health + 50.0)
-	else:
+	elif item_id == "stamina":
 		new_stamina = 100.0
+	elif kind == "item":
+		inventory[item_id] = int(inventory.get(item_id, 0)) + 1
+	elif kind == "upgrade":
+		ship_upgrades[item_id] = int(ship_upgrades.get(item_id, 0)) + 1
+	else:
+		return
+	credits -= cost
+	if kind == "item":
+		player_inventories[player_id] = inventory
+		sync_player_inventory.rpc(player_id, inventory)
+	if kind == "upgrade":
+		sync_ship_upgrades.rpc(ship_upgrades)
 	sync_ship_purchase.rpc(credits, player_id, new_health, new_stamina, item_id)
+
+func _deny_shop_purchase(player_id: int, message: String) -> void:
+	if player_id == multiplayer.get_unique_id():
+		set_prompt(message)
+	else:
+		rpc_id(player_id, "ship_purchase_denied", message)
 
 @rpc("authority", "call_remote", "reliable")
 func ship_purchase_denied(message: String) -> void:
@@ -910,7 +954,9 @@ func sync_ship_purchase(new_credits: int, player_id: int, new_health: float, new
 		players[player_id].health = new_health
 		players[player_id].stamina = new_stamina
 	_update_hud()
-	set_prompt("SERVICE COMPLETE  //  %s" % ("SUIT PATCHED" if item_id == "repair" else "STAMINA CELL RECHARGED"))
+	_play_sfx("ui")
+	var item_label := str(SHOP_CATALOG.get(item_id, {}).get("label", item_id))
+	set_prompt("PURCHASE COMPLETE  //  " + item_label)
 	if player_id == multiplayer.get_unique_id() and is_instance_valid(terminal_panel):
 		terminal_panel.queue_free()
 		terminal_panel = null
