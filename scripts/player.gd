@@ -373,12 +373,12 @@ func _send_network_state() -> void:
 	if not multiplayer.has_multiplayer_peer():
 		return
 	if multiplayer.is_server():
-		rpc("client_receive_transform", global_position, rotation.y, view_camera.rotation.x)
+		rpc("client_receive_transform", global_position, rotation.y, view_camera.rotation.x, stamina, flashlight_charge, flashlight.visible)
 	else:
-		rpc_id(1, "server_receive_transform", global_position, rotation.y, view_camera.rotation.x)
+		rpc_id(1, "server_receive_transform", global_position, rotation.y, view_camera.rotation.x, stamina, flashlight_charge, flashlight.visible)
 
 @rpc("any_peer", "unreliable")
-func server_receive_transform(pos: Vector3, yaw: float, pitch: float) -> void:
+func server_receive_transform(pos: Vector3, yaw: float, pitch: float, current_stamina: float, current_battery: float, lamp_on: bool) -> void:
 	if not multiplayer.is_server():
 		return
 	if multiplayer.get_remote_sender_id() != player_id:
@@ -386,15 +386,22 @@ func server_receive_transform(pos: Vector3, yaw: float, pitch: float) -> void:
 	global_position = pos
 	rotation.y = yaw
 	view_camera.rotation.x = pitch
-	rpc("client_receive_transform", pos, yaw, pitch)
+	stamina = clampf(current_stamina, 0.0, 100.0)
+	flashlight_charge = clampf(current_battery, 0.0, 100.0)
+	flashlight.visible = lamp_on and flashlight_charge > 0.0
+	rpc("client_receive_transform", pos, yaw, pitch, stamina, flashlight_charge, flashlight.visible)
 
 @rpc("any_peer", "call_remote", "unreliable")
-func client_receive_transform(pos: Vector3, yaw: float, pitch: float) -> void:
+func client_receive_transform(pos: Vector3, yaw: float, pitch: float, current_stamina: float, current_battery: float, lamp_on: bool) -> void:
 	if is_multiplayer_authority():
 		return
+	var old_position := global_position
 	global_position = global_position.lerp(pos, 0.72)
 	rotation.y = yaw
 	view_camera.rotation.x = pitch
+	stamina = clampf(current_stamina, 0.0, 100.0)
+	flashlight_charge = clampf(current_battery, 0.0, 100.0)
+	flashlight.visible = lamp_on and flashlight_charge > 0.0
 
 func apply_damage(amount: float) -> void:
 	if is_dead:
