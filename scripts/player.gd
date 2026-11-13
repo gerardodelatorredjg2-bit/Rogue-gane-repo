@@ -48,9 +48,13 @@ func play_emote(value: String) -> void:
 		return
 	if velocity.length() > 0.35:
 		return
-	_apply_emote(value)
 	if multiplayer.has_multiplayer_peer():
-		rpc("sync_emote", value)
+		if multiplayer.is_server():
+			rpc("sync_emote", value)
+		else:
+			rpc_id(1, "server_request_emote", value)
+	else:
+		_apply_emote(value)
 	if game and game.has_method("set_prompt"):
 		game.set_prompt("CREW EMOTE  //  " + value.to_upper())
 
@@ -60,10 +64,18 @@ func _apply_emote(value: String) -> void:
 	emote_name = value
 	emote_time = 2.2
 
+@rpc("any_peer", "reliable")
+func server_request_emote(value: String) -> void:
+	if not multiplayer.is_server() or multiplayer.get_remote_sender_id() != player_id:
+		return
+	if value not in ["dance", "wave", "cheer"] or is_dead:
+		return
+	rpc("sync_emote", value)
+
 @rpc("any_peer", "call_local", "reliable")
 func sync_emote(value: String) -> void:
 	var sender_id := multiplayer.get_remote_sender_id()
-	if sender_id != 0 and sender_id != player_id:
+	if sender_id != 0 and sender_id != player_id and sender_id != 1:
 		return
 	_apply_emote(value)
 
