@@ -62,6 +62,11 @@ mkdir -p "$AUDIO_DIR"
 curl --fail --location --silent --show-error --retry 3 \
   "https://kenney.nl/media/pages/assets/sci-fi-sounds/6b296f9ecf-1677589334/kenney_sci-fi-sounds.zip" \
   --output "$AUDIO_ZIP"
-unzip -jo "$AUDIO_ZIP" '*.ogg' -d "$AUDIO_DIR" >/dev/null
-unzip -jo "$AUDIO_ZIP" 'License.txt' 'license.txt' -d "$AUDIO_DIR" >/dev/null 2>&1 || true
+AUDIO_TMP="${TMPDIR:-/tmp}/kenney-sci-fi-sounds"
+rm -rf "$AUDIO_TMP"
+mkdir -p "$AUDIO_TMP"
+unzip -oq "$AUDIO_ZIP" -d "$AUDIO_TMP"
+find "$AUDIO_TMP" -type f -iname '*.ogg' -exec cp -f {} "$AUDIO_DIR/" \;
+find "$AUDIO_TMP" -type f \( -iname 'license.txt' -o -iname 'licence.txt' \) -exec cp -f {} "$AUDIO_DIR/" \;
+test "$(find "$AUDIO_DIR" -type f -iname '*.ogg' | wc -l)" -gt 0
 echo "Imported $(find "$KENNEY_DIR" -name '*.glb' | wc -l) Kenney props, $(find "$TEXTURE_DIR" -name '*.jpg' | wc -l) PBR maps and $(find "$AUDIO_DIR" -name '*.ogg' | wc -l) CC0 sci-fi sounds."
