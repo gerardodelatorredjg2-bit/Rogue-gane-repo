@@ -3,6 +3,7 @@ extends Node3D
 const PlayerScript = preload("res://scripts/player.gd")
 const EnemyScript = preload("res://scripts/enemy.gd")
 const WorldBuilderScript = preload("res://scripts/world_builder.gd")
+const AmbienceScript = preload("res://scripts/ambience.gd")
 
 const GAME_PORT := 28960
 const MAX_CLIENTS := 4
@@ -36,6 +37,12 @@ var lobby_status: Label
 var result_panel: PanelContainer
 var mobile_ui: Control
 var mobile_visible: bool = false
+var health_bar: ProgressBar
+var stamina_bar: ProgressBar
+var quota_bar: ProgressBar
+var threat_label: Label
+var hud_scan_clock: float = 0.0
+var terminal_panel: PanelContainer
 
 func _ready() -> void:
 	Engine.max_fps = 30 if OS.has_feature("mobile") else 60
@@ -50,6 +57,10 @@ func _process(delta: float) -> void:
 		if is_instance_valid(timer_label):
 			var total := int(shift_seconds)
 			timer_label.text = "%02d:%02d" % [total / 60, total % 60]
+		hud_scan_clock += delta
+		if hud_scan_clock >= 0.35:
+			hud_scan_clock = 0.0
+			_update_threat_indicator()
 
 func _configure_input() -> void:
 	_add_key_action("move_forward", KEY_W)
@@ -89,6 +100,11 @@ func _clear_ui() -> void:
 	timer_label = null
 	mobile_ui = null
 	result_panel = null
+	health_bar = null
+	stamina_bar = null
+	quota_bar = null
+	threat_label = null
+	terminal_panel = null
 
 func _show_lobby(message: String = "ALL SYSTEMS NOMINAL  //  LOCAL NETWORK READY") -> void:
 	_clear_ui()
@@ -282,6 +298,14 @@ func _start_session_world() -> void:
 	shift_seconds = 0.0
 	_clear_world()
 	world_info = WorldBuilderScript.new().build(self, current_map, session_seed)
+	if not has_node("IndustrialAmbience"):
+		var ambience = AmbienceScript.new()
+		ambience.name = "IndustrialAmbience"
+		add_child(ambience)
+	else:
+		var ambience_node = get_node("IndustrialAmbience")
+		if ambience_node.has_method("play"):
+			ambience_node.play()
 	_create_hud()
 	_update_hud()
 	if not OS.has_feature("mobile"):
@@ -539,6 +563,10 @@ func set_local_player_status(current_health: float, current_stamina: float) -> v
 		health_label.text = "SUIT  %03d%%" % int(current_health)
 	if is_instance_valid(stamina_label):
 		stamina_label.text = "STAMINA  %03d%%" % int(current_stamina)
+	if is_instance_valid(health_bar):
+		health_bar.value = current_health
+	if is_instance_valid(stamina_bar):
+		stamina_bar.value = current_stamina
 
 func _update_hud() -> void:
 	if is_instance_valid(objective_label):
@@ -550,55 +578,225 @@ func _update_hud() -> void:
 	if is_instance_valid(timer_label):
 		var total := int(shift_seconds)
 		timer_label.text = "%02d:%02d" % [total / 60, total % 60]
+	if is_instance_valid(quota_bar):
+		quota_bar.value = 100.0 * float(collected) / maxf(1.0, float(quota))
 
 func _create_hud() -> void:
 	_clear_ui()
 	var top := PanelContainer.new()
 	top.anchor_left = 0.02
-	top.anchor_top = 0.025
+	top.anchor_top = 0.02
 	top.anchor_right = 0.98
-	top.anchor_bottom = 0.025
-	top.offset_bottom = 56
-	top.add_theme_stylebox_override("panel", _panel_style(Color(0.015, 0.035, 0.045, 0.86), Color(0.08, 0.54, 0.54, 0.55)))
+	top.anchor_bottom = 0.02
+	top.offset_bottom = 58
+	top.add_theme_stylebox_override("panel", _panel_style(Color(0.012, 0.026, 0.034, 0.94), Color(0.08, 0.67, 0.62, 0.72)))
 	ui_root.add_child(top)
 	var margin := MarginContainer.new()
 	margin.add_theme_constant_override("margin_left", 16)
 	margin.add_theme_constant_override("margin_right", 16)
 	top.add_child(margin)
 	var bar := HBoxContainer.new()
-	bar.add_theme_constant_override("separation", 24)
+	bar.add_theme_constant_override("separation", 20)
 	margin.add_child(bar)
-	map_label = _label("", 12, Color(0.39, 0.9, 0.82))
+	map_label = _label("SITE // UNKNOWN", 12, Color(0.34, 0.94, 0.82))
 	map_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	bar.add_child(map_label)
-	objective_label = _label("", 14, Color(0.91, 0.97, 0.92))
+	var shift_label := _label("CONTRACT %02d" % round_index, 11, Color(0.54, 0.68, 0.72))
+	bar.add_child(shift_label)
+	objective_label = _label("", 14, Color(0.93, 0.98, 0.94))
 	bar.add_child(objective_label)
-	credits_label = _label("", 14, Color(1.0, 0.73, 0.36))
+	credits_label = _label("", 14, Color(1.0, 0.72, 0.35))
 	bar.add_child(credits_label)
-	timer_label = _label("00:00", 14, Color(0.70, 0.84, 0.88))
+	timer_label = _label("00:00", 14, Color(0.73, 0.87, 0.92))
 	bar.add_child(timer_label)
-	health_label = _label("SUIT 100%", 12, Color(0.40, 0.94, 0.74))
-	health_label.anchor_left = 0.025
-	health_label.anchor_top = 0.12
-	health_label.anchor_right = 0.20
-	health_label.anchor_bottom = 0.16
-	ui_root.add_child(health_label)
-	stamina_label = _label("STAMINA 100%", 12, Color(0.40, 0.94, 0.74))
-	stamina_label.anchor_left = 0.025
-	stamina_label.anchor_top = 0.16
-	stamina_label.anchor_right = 0.22
-	stamina_label.anchor_bottom = 0.20
-	ui_root.add_child(stamina_label)
-	prompt_label = _label("RECOVER THE SIGNAL  //  FIND THE SALVAGE", 13, Color(0.55, 0.92, 0.84))
-	prompt_label.anchor_left = 0.2
-	prompt_label.anchor_top = 0.86
-	prompt_label.anchor_right = 0.8
-	prompt_label.anchor_bottom = 0.94
+
+	var vitals := PanelContainer.new()
+	vitals.anchor_left = 0.02
+	vitals.anchor_top = 0.115
+	vitals.anchor_right = 0.28
+	vitals.anchor_bottom = 0.115
+	vitals.offset_bottom = 132
+	vitals.add_theme_stylebox_override("panel", _panel_style(Color(0.012, 0.027, 0.034, 0.82), Color(0.12, 0.38, 0.40, 0.48)))
+	ui_root.add_child(vitals)
+	var vitals_box := VBoxContainer.new()
+	vitals_box.add_theme_constant_override("separation", 5)
+	vitals.add_child(vitals_box)
+	vitals_box.add_child(_label("SUIT TELEMETRY", 10, Color(0.36, 0.79, 0.78)))
+	health_label = _label("INTEGRITY  100%", 11, Color(0.44, 0.96, 0.76))
+	vitals_box.add_child(health_label)
+	health_bar = _make_hud_bar(Color(0.12, 0.88, 0.65))
+	vitals_box.add_child(health_bar)
+	stamina_label = _label("STAMINA  100%", 11, Color(0.58, 0.83, 0.94))
+	vitals_box.add_child(stamina_label)
+	stamina_bar = _make_hud_bar(Color(0.22, 0.65, 0.96))
+	vitals_box.add_child(stamina_bar)
+
+	var objective_panel := PanelContainer.new()
+	objective_panel.anchor_left = 0.72
+	objective_panel.anchor_top = 0.115
+	objective_panel.anchor_right = 0.98
+	objective_panel.anchor_bottom = 0.115
+	objective_panel.offset_bottom = 94
+	objective_panel.add_theme_stylebox_override("panel", _panel_style(Color(0.012, 0.027, 0.034, 0.82), Color(0.55, 0.38, 0.15, 0.52)))
+	ui_root.add_child(objective_panel)
+	var objective_box := VBoxContainer.new()
+	objective_box.add_theme_constant_override("separation", 7)
+	objective_panel.add_child(objective_box)
+	objective_box.add_child(_label("RECOVERY QUOTA", 10, Color(0.98, 0.67, 0.32)))
+	quota_bar = _make_hud_bar(Color(1.0, 0.61, 0.24))
+	objective_box.add_child(quota_bar)
+	objective_box.add_child(_label("FIND SALVAGE  /  RETURN TO THE SHIP", 9, Color(0.59, 0.70, 0.70)))
+
+	var reticle := _label("+", 22, Color(0.72, 0.96, 0.90, 0.78))
+	reticle.anchor_left = 0.48
+	reticle.anchor_top = 0.465
+	reticle.anchor_right = 0.52
+	reticle.anchor_bottom = 0.535
+	reticle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	reticle.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	ui_root.add_child(reticle)
+	threat_label = _label("●  MOTION SENSOR // QUIET", 10, Color(0.38, 0.84, 0.72))
+	threat_label.anchor_left = 0.31
+	threat_label.anchor_top = 0.105
+	threat_label.anchor_right = 0.69
+	threat_label.anchor_bottom = 0.15
+	threat_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	ui_root.add_child(threat_label)
+	prompt_label = _label("RECOVER THE SIGNAL  //  FIND THE SALVAGE", 12, Color(0.68, 0.96, 0.87))
+	prompt_label.anchor_left = 0.25
+	prompt_label.anchor_top = 0.72
+	prompt_label.anchor_right = 0.75
+	prompt_label.anchor_bottom = 0.79
 	prompt_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	prompt_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	ui_root.add_child(prompt_label)
 	_create_mobile_controls()
 	_update_hud()
+
+func _make_hud_bar(fill_color: Color) -> ProgressBar:
+	var bar := ProgressBar.new()
+	bar.min_value = 0.0
+	bar.max_value = 100.0
+	bar.value = 100.0
+	bar.show_percentage = false
+	bar.custom_minimum_size = Vector2(0, 8)
+	var background := StyleBoxFlat.new()
+	background.bg_color = Color(0.035, 0.075, 0.08, 0.95)
+	background.set_corner_radius_all(3)
+	var fill := StyleBoxFlat.new()
+	fill.bg_color = fill_color
+	fill.set_corner_radius_all(3)
+	bar.add_theme_stylebox_override("background", background)
+	bar.add_theme_stylebox_override("fill", fill)
+	return bar
+
+func _update_threat_indicator() -> void:
+	if not is_instance_valid(threat_label):
+		return
+	var player := _local_player()
+	if player == null:
+		threat_label.text = "●  MOTION SENSOR // STANDBY"
+		return
+	var nearest := 999.0
+	for enemy in enemies.values():
+		if is_instance_valid(enemy):
+			nearest = minf(nearest, player.global_position.distance_to(enemy.global_position))
+	if nearest < 7.0:
+		threat_label.text = "●  PROXIMITY ALERT // HOSTILE VERY CLOSE"
+		threat_label.add_theme_color_override("font_color", Color(1.0, 0.25, 0.18))
+	elif nearest < 16.0:
+		threat_label.text = "●  MOTION DETECTED // CONTACT NEARBY"
+		threat_label.add_theme_color_override("font_color", Color(1.0, 0.67, 0.22))
+	else:
+		threat_label.text = "●  MOTION SENSOR // QUIET"
+		threat_label.add_theme_color_override("font_color", Color(0.38, 0.84, 0.72))
+
+func open_ship_terminal(player_id: int) -> void:
+	if player_id != multiplayer.get_unique_id() or is_instance_valid(terminal_panel):
+		return
+	terminal_panel = PanelContainer.new()
+	terminal_panel.anchor_left = 0.5
+	terminal_panel.anchor_top = 0.5
+	terminal_panel.anchor_right = 0.5
+	terminal_panel.anchor_bottom = 0.5
+	terminal_panel.offset_left = -190
+	terminal_panel.offset_top = -155
+	terminal_panel.offset_right = 190
+	terminal_panel.offset_bottom = 155
+	terminal_panel.add_theme_stylebox_override("panel", _panel_style(Color(0.012, 0.035, 0.043, 0.98), Color(0.12, 0.83, 0.72)))
+	ui_root.add_child(terminal_panel)
+	var stack := VBoxContainer.new()
+	stack.add_theme_constant_override("separation", 10)
+	terminal_panel.add_child(stack)
+	var title := _label("DROP-SHIP // SERVICE BAY", 18, Color(0.45, 0.98, 0.84))
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	stack.add_child(title)
+	var subtitle := _label("FIELD REPAIRS  /  CREDITS %04d" % credits, 11, Color(0.70, 0.82, 0.82))
+	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	stack.add_child(subtitle)
+	var repair := _button("PATCH SUIT  +50 INTEGRITY  //  25 CR", true)
+	repair.pressed.connect(func(): request_ship_purchase("repair", player_id))
+	stack.add_child(repair)
+	var recharge := _button("RECHARGE STAMINA  //  15 CR", false)
+	recharge.pressed.connect(func(): request_ship_purchase("stamina", player_id))
+	stack.add_child(recharge)
+	var close := _button("CLOSE TERMINAL", false)
+	close.pressed.connect(func():
+		if is_instance_valid(terminal_panel):
+			terminal_panel.queue_free()
+		terminal_panel = null
+	)
+	stack.add_child(close)
+
+func request_ship_purchase(item_id: String, player_id: int) -> void:
+	if multiplayer.is_server():
+		_server_ship_purchase(item_id, player_id)
+	else:
+		rpc_id(1, "server_ship_purchase", item_id, player_id)
+
+@rpc("any_peer", "reliable")
+func server_ship_purchase(item_id: String, player_id: int) -> void:
+	if not multiplayer.is_server() or multiplayer.get_remote_sender_id() != player_id:
+		return
+	_server_ship_purchase(item_id, player_id)
+
+func _server_ship_purchase(item_id: String, player_id: int) -> void:
+	if round_finished or not players.has(player_id):
+		return
+	var player: Node3D = players[player_id]
+	if player.global_position.distance_to(Vector3(0, 0, 17)) > 5.0:
+		return
+	var cost := 25 if item_id == "repair" else (15 if item_id == "stamina" else -1)
+	if cost < 0 or credits < cost:
+		if player_id == multiplayer.get_unique_id():
+			set_prompt("INSUFFICIENT CREDITS OR INVALID SERVICE")
+		else:
+			rpc_id(player_id, "ship_purchase_denied", "INSUFFICIENT CREDITS OR INVALID SERVICE")
+		return
+	credits -= cost
+	var new_health := float(player.get("health"))
+	var new_stamina := float(player.get("stamina"))
+	if item_id == "repair":
+		new_health = minf(100.0, new_health + 50.0)
+	else:
+		new_stamina = 100.0
+	sync_ship_purchase.rpc(credits, player_id, new_health, new_stamina, item_id)
+
+@rpc("authority", "call_remote", "reliable")
+func ship_purchase_denied(message: String) -> void:
+	set_prompt(message)
+
+@rpc("authority", "call_local", "reliable")
+func sync_ship_purchase(new_credits: int, player_id: int, new_health: float, new_stamina: float, item_id: String) -> void:
+	credits = new_credits
+	if players.has(player_id) and is_instance_valid(players[player_id]):
+		players[player_id].health = new_health
+		players[player_id].stamina = new_stamina
+	_update_hud()
+	set_prompt("SERVICE COMPLETE  //  %s" % ("SUIT PATCHED" if item_id == "repair" else "STAMINA CELL RECHARGED"))
+	if player_id == multiplayer.get_unique_id() and is_instance_valid(terminal_panel):
+		terminal_panel.queue_free()
+		terminal_panel = null
 
 func _create_mobile_controls() -> void:
 	mobile_visible = OS.has_feature("mobile")
@@ -654,6 +852,8 @@ func _local_player() -> SalvagePlayer:
 
 func _disconnect_to_menu() -> void:
 	session_live = false
+	if has_node("IndustrialAmbience"):
+		get_node("IndustrialAmbience").call("stop_ambience")
 	if multiplayer.has_multiplayer_peer():
 		multiplayer.multiplayer_peer.close()
 	multiplayer.multiplayer_peer = OfflineMultiplayerPeer.new()
