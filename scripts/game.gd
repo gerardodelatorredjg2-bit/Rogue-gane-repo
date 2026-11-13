@@ -767,7 +767,9 @@ func _server_ship_purchase(item_id: String, player_id: int) -> void:
 		return
 	var cost := 25 if item_id == "repair" else (15 if item_id == "stamina" else -1)
 	if cost < 0 or credits < cost:
-		if multiplayer.is_server():
+		if player_id == multiplayer.get_unique_id():
+			set_prompt("INSUFFICIENT CREDITS OR INVALID SERVICE")
+		else:
 			rpc_id(player_id, "ship_purchase_denied", "INSUFFICIENT CREDITS OR INVALID SERVICE")
 		return
 	credits -= cost
