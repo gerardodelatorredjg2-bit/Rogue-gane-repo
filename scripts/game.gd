@@ -42,6 +42,7 @@ var stamina_bar: ProgressBar
 var quota_bar: ProgressBar
 var threat_label: Label
 var hud_scan_clock: float = 0.0
+var terminal_panel: PanelContainer
 
 func _ready() -> void:
 	Engine.max_fps = 30 if OS.has_feature("mobile") else 60
@@ -103,6 +104,7 @@ func _clear_ui() -> void:
 	stamina_bar = null
 	quota_bar = null
 	threat_label = null
+	terminal_panel = null
 
 func _show_lobby(message: String = "ALL SYSTEMS NOMINAL  //  LOCAL NETWORK READY") -> void:
 	_clear_ui()
@@ -707,6 +709,91 @@ func _update_threat_indicator() -> void:
 	else:
 		threat_label.text = "●  MOTION SENSOR // QUIET"
 		threat_label.add_theme_color_override("font_color", Color(0.38, 0.84, 0.72))
+
+func open_ship_terminal(player_id: int) -> void:
+	if player_id != multiplayer.get_unique_id() or is_instance_valid(terminal_panel):
+		return
+	terminal_panel = PanelContainer.new()
+	terminal_panel.anchor_left = 0.5
+	terminal_panel.anchor_top = 0.5
+	terminal_panel.anchor_right = 0.5
+	terminal_panel.anchor_bottom = 0.5
+	terminal_panel.offset_left = -190
+	terminal_panel.offset_top = -155
+	terminal_panel.offset_right = 190
+	terminal_panel.offset_bottom = 155
+	terminal_panel.add_theme_stylebox_override("panel", _panel_style(Color(0.012, 0.035, 0.043, 0.98), Color(0.12, 0.83, 0.72)))
+	ui_root.add_child(terminal_panel)
+	var stack := VBoxContainer.new()
+	stack.add_theme_constant_override("separation", 10)
+	terminal_panel.add_child(stack)
+	var title := _label("DROP-SHIP // SERVICE BAY", 18, Color(0.45, 0.98, 0.84))
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	stack.add_child(title)
+	var subtitle := _label("FIELD REPAIRS  /  CREDITS %04d" % credits, 11, Color(0.70, 0.82, 0.82))
+	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	stack.add_child(subtitle)
+	var repair := _button("PATCH SUIT  +50 INTEGRITY  //  25 CR", true)
+	repair.pressed.connect(func(): request_ship_purchase("repair", player_id))
+	stack.add_child(repair)
+	var recharge := _button("RECHARGE STAMINA  //  15 CR", false)
+	recharge.pressed.connect(func(): request_ship_purchase("stamina", player_id))
+	stack.add_child(recharge)
+	var close := _button("CLOSE TERMINAL", false)
+	close.pressed.connect(func():
+		if is_instance_valid(terminal_panel):
+			terminal_panel.queue_free()
+		terminal_panel = null
+	)
+	stack.add_child(close)
+
+func request_ship_purchase(item_id: String, player_id: int) -> void:
+	if multiplayer.is_server():
+		_server_ship_purchase(item_id, player_id)
+	else:
+		rpc_id(1, "server_ship_purchase", item_id, player_id)
+
+@rpc("any_peer", "reliable")
+func server_ship_purchase(item_id: String, player_id: int) -> void:
+	if not multiplayer.is_server() or multiplayer.get_remote_sender_id() != player_id:
+		return
+	_server_ship_purchase(item_id, player_id)
+
+func _server_ship_purchase(item_id: String, player_id: int) -> void:
+	if round_finished or not players.has(player_id):
+		return
+	var player: Node3D = players[player_id]
+	if player.global_position.distance_to(Vector3(0, 0, 17)) > 5.0:
+		return
+	var cost := 25 if item_id == "repair" else (15 if item_id == "stamina" else -1)
+	if cost < 0 or credits < cost:
+		if multiplayer.is_server():
+			rpc_id(player_id, "ship_purchase_denied", "INSUFFICIENT CREDITS OR INVALID SERVICE")
+		return
+	credits -= cost
+	var new_health := float(player.get("health"))
+	var new_stamina := float(player.get("stamina"))
+	if item_id == "repair":
+		new_health = minf(100.0, new_health + 50.0)
+	else:
+		new_stamina = 100.0
+	sync_ship_purchase.rpc(credits, player_id, new_health, new_stamina, item_id)
+
+@rpc("authority", "call_remote", "reliable")
+func ship_purchase_denied(message: String) -> void:
+	set_prompt(message)
+
+@rpc("authority", "call_local", "reliable")
+func sync_ship_purchase(new_credits: int, player_id: int, new_health: float, new_stamina: float, item_id: String) -> void:
+	credits = new_credits
+	if players.has(player_id) and is_instance_valid(players[player_id]):
+		players[player_id].health = new_health
+		players[player_id].stamina = new_stamina
+	_update_hud()
+	set_prompt("SERVICE COMPLETE  //  %s" % ("SUIT PATCHED" if item_id == "repair" else "STAMINA CELL RECHARGED"))
+	if player_id == multiplayer.get_unique_id() and is_instance_valid(terminal_panel):
+		terminal_panel.queue_free()
+		terminal_panel = null
 
 func _create_mobile_controls() -> void:
 	mobile_visible = OS.has_feature("mobile")
