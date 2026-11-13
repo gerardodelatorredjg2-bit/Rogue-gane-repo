@@ -16,6 +16,7 @@ var is_dead: bool = false
 var flashlight_charge: float = 100.0
 var move_speed_multiplier: float = 1.0
 var damage_resistance: float = 0.0
+var invert_look_y: bool = false
 var body_visual: Node3D
 var left_arm: Node3D
 var right_arm: Node3D
@@ -276,7 +277,8 @@ func _unhandled_input(event: InputEvent) -> void:
 func _apply_look(relative: Vector2) -> void:
 	rotation.y -= relative.x * look_sensitivity
 	if view_camera:
-		view_camera.rotation.x = clampf(view_camera.rotation.x - relative.y * look_sensitivity, -1.35, 1.35)
+		var vertical_sign := 1.0 if invert_look_y else -1.0
+		view_camera.rotation.x = clampf(view_camera.rotation.x + relative.y * look_sensitivity * vertical_sign, -1.35, 1.35)
 
 func _interact() -> void:
 	if not game:
