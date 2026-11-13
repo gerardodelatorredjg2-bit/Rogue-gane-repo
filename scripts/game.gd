@@ -557,6 +557,8 @@ func broadcast_enemy_state(enemy_id: String, pos: Vector3, yaw: float, animation
 
 @rpc("any_peer", "call_remote", "unreliable")
 func sync_enemy_state(enemy_id: String, pos: Vector3, yaw: float, _animation_time: float) -> void:
+	if multiplayer.get_remote_sender_id() != 1:
+		return
 	if enemies.has(enemy_id) and is_instance_valid(enemies[enemy_id]):
 		var enemy: Node3D = enemies[enemy_id]
 		enemy.global_position = enemy.global_position.lerp(pos, 0.75)
