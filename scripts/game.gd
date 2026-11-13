@@ -780,7 +780,7 @@ func open_settings() -> void:
 	sensitivity_slider.step = 0.0002
 	sensitivity_slider.value = saved_sensitivity
 	stack.add_child(sensitivity_slider)
-	stack.add_child(_label("GRAPHICS PRESET", 10, Color(0.55, 0.82, 0.82)))
+	stack.add_child(_label("PERFORMANCE PRESET", 10, Color(0.55, 0.82, 0.82)))
 	var quality := OptionButton.new()
 	quality.add_item("LOW  //  30 FPS")
 	quality.add_item("BALANCED  //  45 FPS")
