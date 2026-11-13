@@ -68,5 +68,12 @@ mkdir -p "$AUDIO_TMP"
 unzip -oq "$AUDIO_ZIP" -d "$AUDIO_TMP"
 find "$AUDIO_TMP" -type f -iname '*.ogg' -exec cp -f {} "$AUDIO_DIR/" \;
 find "$AUDIO_TMP" -type f \( -iname 'license.txt' -o -iname 'licence.txt' \) -exec cp -f {} "$AUDIO_DIR/" \;
+cat > "$AUDIO_DIR/LICENSE-CC0.txt" <<'LICENSE'
+Kenney Sci-fi Sounds
+Source: https://kenney.nl/assets/sci-fi-sounds
+License: Creative Commons Zero 1.0 (CC0).
+The pack contains 70 OGG effects. Kenney's asset page lists CC0:
+https://kenney.nl/assets/sci-fi-sounds
+LICENSE
 test "$(find "$AUDIO_DIR" -type f -iname '*.ogg' | wc -l)" -gt 0
 echo "Imported $(find "$KENNEY_DIR" -name '*.glb' | wc -l) Kenney props, $(find "$TEXTURE_DIR" -name '*.jpg' | wc -l) PBR maps and $(find "$AUDIO_DIR" -name '*.ogg' | wc -l) CC0 sci-fi sounds."
