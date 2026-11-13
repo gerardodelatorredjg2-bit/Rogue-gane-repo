@@ -9,11 +9,14 @@ Cooperative sci-fi salvage horror for Android and local Wi-Fi.
 - First-person 3D exploration with desktop and touch controls.
 - ENet multiplayer: one phone hosts a Wi-Fi/LAN session; other phones join using the host's local IPv4 address.
 - Procedurally assembled industrial environments with six selectable site themes.
-- Robot stalkers with patrol, pursuit and attack states; the Android workflow downloads four rigged low-poly CC0 robot models and keeps a procedural fallback.
-- Salvage pickups, extraction quota, team credits and round progression.
-- Modular drop-ship landing bay with an interactive service terminal for suit repairs and stamina refills, plus industrial set dressing, hazard markings, service panels, fog and low-cost lighting.\n- HUD telemetry with suit/stamina bars, quota progress, proximity warning sensor and a quick-access settings panel.
-- Persistent player profile name, master/music volume sliders, graphics FPS presets and mouse/touch look sensitivity setting.
-- Three crew emotes (dance, wave and cheer) on the mobile HUD; emotes play only while stationary.
+- Robot stalkers with patrol, line-of-sight pursuit, search memory, attack lunge, horror overlays and positional audio; the Android workflow downloads four rigged CC0 robot models plus Kenney props.
+- Salvage pickups, extraction quota, team credits and escalating contracts (quota +1 each shift, extra stalkers on later shifts).
+- Personal inventory with medkits, flashlight cells and motion scanner; items can be used, dropped with rigid-body physics and picked up again.
+- Expanded ship quartermaster: suit repair, stamina, medkits, batteries, scanner, hull reinforcement, cargo racks and engine tuning. Team upgrades affect damage resistance, inventory capacity, movement speed and visible ship modules.
+- Modular drop-ship landing bay with interactive quartermaster, service terminal, hazard markings, service panels, fog and low-cost lighting; visible armor, cargo-rack and engine modules change as the crew buys upgrades.\n- HUD telemetry with suit/stamina bars, quota progress, proximity warning sensor and a quick-access settings panel.
+- Persistent player profile name, master/music volume sliders, graphics render-scale/FPS presets, look sensitivity, WASD/arrow-key selection, inverted vertical look and left-handed mobile controls.
+- Three synchronized crew emotes (dance, wave and cheer) on the mobile HUD; basic articulated suit walk cycles and nameplates display across LAN.
+- The Android build fetches Kenney Space Kit CC0 modular props, Poly Haven 1K CC0 rusty-metal PBR diffuse/roughness maps and Kenney CC0 sci-fi OGG effects.
 - Stalker escalation: later contracts increase enemy movement speed and detection range, with a short attack lunge.\n- A lightweight procedural machine hum as a temporary ambience layer; final music is intentionally left for the project owner.
 - GitHub Actions workflow for Android APK export.
 
@@ -49,7 +52,7 @@ This is an actively developed game project, not a claim of a finished commercial
 
 ## Asset policy
 
-The industrial environment and drop-ship are original procedural geometry. The Android build pipeline fetches four rigged low-poly robot GLBs from Gobkit's CC0 1.0 collection using `scripts/fetch_assets.sh`; the downloaded license is kept beside the models. Additional Kenney, Quaternius, Poly Pizza and Sketchfab assets may be added only after checking each model's license and attribution terms.
+The industrial environment and drop-ship combine original procedural geometry with licensed assets. `scripts/fetch_assets.sh` downloads Gobkit robot GLBs, Kenney Space Kit props and sci-fi sounds (CC0), plus Poly Haven's Rusty Painted Metal 1K PBR maps (CC0). Exact sources and license notes are listed in `docs/ASSETS_AND_ATTRIBUTION.md`.
 
 ## License
 
