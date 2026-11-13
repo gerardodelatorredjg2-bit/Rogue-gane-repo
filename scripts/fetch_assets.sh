@@ -41,7 +41,7 @@ LICENSE
 TEXTURE_DIR="assets/textures/industrial"
 TEXTURE_BASE="https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/rusty_painted_metal"
 mkdir -p "$TEXTURE_DIR"
-for map in diff nor_gl rough; do
+for map in diff rough; do
   curl --fail --location --silent --show-error --retry 3 \
     "$TEXTURE_BASE/rusty_painted_metal_\${map}_1k.jpg" \
     --output "$TEXTURE_DIR/rusty_painted_metal_\${map}_1k.jpg"
@@ -51,7 +51,7 @@ cat > "$TEXTURE_DIR/LICENSE-CC0.txt" <<'LICENSE'
 Texture: Rusty Painted Metal
 Creator: Amal Kumar
 Source: https://polyhaven.com/a/rusty_painted_metal
-Maps: diffuse, OpenGL normal, roughness (1K JPEG).
+Maps: diffuse and roughness (1K JPEG).
 License: CC0 1.0 Universal.
 LICENSE
 
