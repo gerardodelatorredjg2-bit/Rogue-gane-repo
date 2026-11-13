@@ -5,6 +5,7 @@ var player_id: int = 1
 var game: Node
 var view_camera: Camera3D
 var flashlight: SpotLight3D
+var flashlight_level: int = 0
 var health: float = 100.0
 var stamina: float = 100.0
 var mobile_buttons: Dictionary = {}
@@ -162,6 +163,13 @@ func _physics_process(delta: float) -> void:
 		play_emote(2)
 	if Input.is_action_just_pressed("emote_robot") or consume_mobile_action("emote_robot"):
 		play_emote(3)
+
+func upgrade_flashlight() -> void:
+	flashlight_level = mini(2, flashlight_level + 1)
+	if flashlight:
+		flashlight.spot_range = 19.0 + flashlight_level * 5.0
+		flashlight.light_energy = 1.65 + flashlight_level * 0.45
+		flashlight.spot_angle = 38.0 + flashlight_level * 3.0
 
 func play_emote(which: int) -> void:
 	if which < 1 or which > 3 or not is_multiplayer_authority():
