@@ -76,6 +76,7 @@ func build(parent: Node, map_index: int, seed: int) -> Dictionary:
 	return {
 		"spawn": Vector3(0, 0, 17),
 		"exit": exit_pos,
+		"ship": Vector3(0, 0, 17),
 		"enemy_spawns": enemy_spawns,
 		"loot_ids": loot_ids,
 		"map_name": MAP_NAMES[map_index % MAP_NAMES.size()]
