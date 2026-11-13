@@ -342,6 +342,7 @@ func _spawn_player(peer_id: int, pos: Vector3) -> void:
 	player.name = "Player_%d" % peer_id
 	player.player_id = peer_id
 	player.game = self
+	player.look_sensitivity = float(settings_config.get_value("controls", "sensitivity", 0.0022))
 	add_child(player)
 	player.global_position = pos
 	players[peer_id] = player
@@ -886,6 +887,12 @@ func _load_user_settings() -> void:
 		player_display_name = "CREWMATE"
 	_apply_audio_setting("Master", float(settings_config.get_value("audio", "master", 0.85)))
 	_apply_audio_setting("Music", float(settings_config.get_value("audio", "music", 0.65)))
+	_apply_quality_setting(int(settings_config.get_value("video", "preset", 1)))
+
+func _apply_quality_setting(preset: int) -> void:
+	var selected := clampi(preset, 0, 2)
+	Engine.max_fps = [30, 45, 60][selected]
+	get_viewport().scaling_3d_scale = [0.70, 0.85, 1.0][selected]
 
 func _apply_audio_setting(bus_name: String, linear_value: float) -> void:
 	var bus_index := AudioServer.get_bus_index(bus_name)
@@ -938,11 +945,11 @@ func _open_settings() -> void:
 	music_slider.step = 0.05
 	music_slider.value = float(settings_config.get_value("audio", "music", 0.65))
 	stack.add_child(music_slider)
-	stack.add_child(_label("GRAPHICS PRESET  /  FPS LIMIT", 10, Color(0.36, 0.79, 0.78)))
+	stack.add_child(_label("GRAPHICS QUALITY  /  3D SCALE + FPS", 10, Color(0.36, 0.79, 0.78)))
 	var quality := OptionButton.new()
-	quality.add_item("LOW  /  30 FPS")
-	quality.add_item("BALANCED  /  45 FPS")
-	quality.add_item("HIGH  /  60 FPS")
+	quality.add_item("LOW  /  70% SCALE  /  30 FPS")
+	quality.add_item("BALANCED  /  85% SCALE  /  45 FPS")
+	quality.add_item("HIGH  /  100% SCALE  /  60 FPS")
 	quality.select(int(settings_config.get_value("video", "preset", 1)))
 	stack.add_child(quality)
 	stack.add_child(_label("LOOK SENSITIVITY", 10, Color(0.36, 0.79, 0.78)))
@@ -972,11 +979,11 @@ func _open_settings() -> void:
 		settings_config.save("user://rogue_settings.cfg")
 		_apply_audio_setting("Master", master_slider.value)
 		_apply_audio_setting("Music", music_slider.value)
-		Engine.max_fps = [30, 45, 60][quality.selected]
+		_apply_quality_setting(quality.selected)
 		var local_player := _local_player()
 		if local_player:
 			local_player.look_sensitivity = sensitivity.value
-			local_player.set_player_name(player_display_name)
+			local_player.publish_player_name(player_display_name)
 		set_prompt("SETTINGS SAVED  //  PROFILE UPDATED")
 	)
 	close.pressed.connect(func():
