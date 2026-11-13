@@ -948,7 +948,7 @@ func open_ship_terminal(player_id: int) -> void:
 		var row_button := _button("%s  //  ¢%d" % [entry.get("label", item_id), display_cost], str(entry.get("kind")) == "upgrade")
 		row_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		var captured_item_id := str(item_id)
-		row_button.pressed.connect(func(): request_ship_purchase(captured_item_id, player_id))
+		row_button.pressed.connect(request_ship_purchase.bind(captured_item_id, player_id))
 		list.add_child(row_button)
 	var close := _button("CLOSE QUARTERMASTER", false)
 	close.pressed.connect(func():
@@ -1095,12 +1095,12 @@ func open_inventory(player_id: int) -> void:
 		var use_button := _button("USE", true)
 		use_button.custom_minimum_size = Vector2(72, 38)
 		use_button.disabled = count <= 0
-		use_button.pressed.connect(func(): request_use_inventory_item(captured_item_id, player_id))
+		use_button.pressed.connect(request_use_inventory_item.bind(captured_item_id, player_id))
 		row.add_child(use_button)
 		var drop_button := _button("DROP", false)
 		drop_button.custom_minimum_size = Vector2(72, 38)
 		drop_button.disabled = count <= 0
-		drop_button.pressed.connect(func(): request_drop_inventory_item(captured_item_id, player_id))
+		drop_button.pressed.connect(request_drop_inventory_item.bind(captured_item_id, player_id))
 		row.add_child(drop_button)
 	var instructions := _label("I / BAG: OPEN   •   E: PICK UP   •   F: FLASHLIGHT", 9, Color(0.47, 0.65, 0.70))
 	instructions.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
