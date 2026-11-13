@@ -68,6 +68,9 @@ var inventory_panel: PanelContainer
 var settings_panel: PanelContainer
 var settings_config := ConfigFile.new()
 var player_display_name: String = "CREWMATE"
+var move_key_layout: int = 0
+var mobile_left_handed: bool = false
+var invert_look_y: bool = false
 
 func _ready() -> void:
 	Engine.max_fps = 30 if OS.has_feature("mobile") else 60
@@ -434,6 +437,7 @@ func _spawn_player(peer_id: int, pos: Vector3) -> void:
 	player.player_id = peer_id
 	player.game = self
 	player.look_sensitivity = float(settings_config.get_value("controls", "sensitivity", 0.0022))
+	player.invert_look_y = invert_look_y
 	player.move_speed_multiplier = 1.0 + float(ship_upgrades.get("engine", 0)) * 0.05
 	player.damage_resistance = minf(0.35, float(ship_upgrades.get("hull", 0)) * 0.06)
 	add_child(player)
@@ -1259,6 +1263,19 @@ func _load_user_settings() -> void:
 	_apply_audio_setting("Master", float(settings_config.get_value("audio", "master", 0.85)))
 	_apply_audio_setting("Music", float(settings_config.get_value("audio", "music", 0.65)))
 	_apply_quality_setting(int(settings_config.get_value("video", "preset", 1)))
+	move_key_layout = int(settings_config.get_value("controls", "key_layout", 0))
+	mobile_left_handed = bool(settings_config.get_value("controls", "left_handed", false))
+	invert_look_y = bool(settings_config.get_value("controls", "invert_y", false))
+	_apply_key_layout()
+
+func _apply_key_layout() -> void:
+	for action in ["move_forward", "move_back", "move_left", "move_right"]:
+		InputMap.action_erase_events(action)
+	var keys := [KEY_W, KEY_S, KEY_A, KEY_D] if move_key_layout == 0 else [KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT]
+	_add_key_action("move_forward", keys[0])
+	_add_key_action("move_back", keys[1])
+	_add_key_action("move_left", keys[2])
+	_add_key_action("move_right", keys[3])
 
 func _apply_quality_setting(preset: int) -> void:
 	var selected := clampi(preset, 0, 2)
