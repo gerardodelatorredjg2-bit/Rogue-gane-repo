@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+<defs>
+ <radialGradient id="bg" cx="50%" cy="42%" r="72%"><stop offset="0" stop-color="#123849"/><stop offset=".55" stop-color="#06131e"/><stop offset="1" stop-color="#02060b"/></radialGradient>
+ <linearGradient id="steel" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#91a6ad"/><stop offset=".3" stop-color="#26343d"/><stop offset=".68" stop-color="#111b22"/><stop offset="1" stop-color="#05090e"/></linearGradient>
+ <linearGradient id="red" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#ff7064"/><stop offset=".45" stop-color="#ff211b"/><stop offset="1" stop-color="#79050b"/></linearGradient>
+ <filter id="glow"><feGaussianBlur stdDeviation="8" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+ <pattern id="grit" width="22" height="22" patternUnits="userSpaceOnUse"><path d="M2 4h3M13 15h2M8 20h1" stroke="#a9c0c5" stroke-opacity=".12" stroke-width="1"/></pattern>
+</defs>
+<rect width="512" height="512" rx="110" fill="url(#bg)"/>
+<path d="M84 60h344l24 24v344l-24 24H84l-24-24V84z" fill="none" stroke="#e02722" stroke-width="18" opacity=".9"/>
+<path d="M83 92l36-32m274 0 36 32M83 420l36 32m274 0 36-32" stroke="#ff8c63" stroke-width="9" opacity=".8"/>
+<circle cx="256" cy="246" r="163" fill="#08131a" stroke="#2b5967" stroke-width="5"/>
+<path d="M148 155l44-34h128l44 34 24 140-51 91-81 46-81-46-51-91z" fill="url(#steel)" stroke="#9aadb3" stroke-width="8" stroke-linejoin="round"/>
+<path d="M158 170l38-29h120l38 29-16 59-52 25H226l-52-25z" fill="#18262d" stroke="#5a7179" stroke-width="5"/>
+<path d="M190 220l43-22h46l43 22-10 58-35 24h-42l-35-24z" fill="#03080d" stroke="#647982" stroke-width="7"/>
+<path d="M183 225l58-20 12 35-57 19zM329 225l-58-20-12 35 57 19z" fill="url(#red)" filter="url(#glow)"/>
+<circle cx="222" cy="232" r="13" fill="#fff3ed"/><circle cx="290" cy="232" r="13" fill="#fff3ed"/>
+<path d="M231 308h50l-10 60h-30z" fill="#050a0f" stroke="#72858c" stroke-width="5"/>
+<path d="M241 316v44m10-44v44m10-44v44" stroke="#e34a36" stroke-width="5"/>
+<path d="M133 264l-38 28-9 54 42 27 34-45M379 264l38 28 9 54-42 27-34-45" fill="none" stroke="#607780" stroke-width="17" stroke-linecap="round"/>
+<path d="M105 331l-22 55 43 24m281-79 22 55-43 24" fill="none" stroke="#d42b25" stroke-width="11" stroke-linecap="round"/>
+<path d="M256 90v34M90 256h28m276 0h28M256 388v34" stroke="#7bd2db" stroke-width="6" opacity=".8"/>
+<path d="M256 53l24 38h-48z" fill="#ff3128" stroke="#ffc3a5" stroke-width="4"/>
+<path d="M256 68v12m0 5v2" stroke="#070b0e" stroke-width="5" stroke-linecap="round"/>
+<rect width="512" height="512" rx="110" fill="url(#grit)" opacity=".42"/>
+</svg>
