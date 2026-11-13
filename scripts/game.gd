@@ -450,6 +450,7 @@ func _start_session_world() -> void:
 	session_live = true
 	round_finished = false
 	shift_seconds = 0.0
+	scanner_until = 0.0
 	_clear_world()
 	world_info = WorldBuilderScript.new().build(self, current_map, session_seed)
 	_refresh_ship_upgrade_visuals()
