@@ -20,7 +20,7 @@ var leg_right: Node3D
 var body: Node3D
 var eye_light: OmniLight3D
 
-const COLORS := [Color(0.95, 0.23, 0.16), Color(0.76, 0.30, 1.0), Color(0.92, 0.66, 0.18)]
+const EXTERNAL_MODELS := [\n\t"res://assets/models/robots/minion-a01.glb",\n\t"res://assets/models/robots/minion-b01.glb",\n\t"res://assets/models/robots/minion-c01.glb",\n\t"res://assets/models/robots/minion-d01.glb"\n]\n\nconst COLORS := [Color(0.95, 0.23, 0.16), Color(0.76, 0.30, 1.0), Color(0.92, 0.66, 0.18)]
 
 func _ready() -> void:
 	add_to_group("enemies")
@@ -47,6 +47,26 @@ func _build_robot() -> void:
 	body = Node3D.new()
 	body.position.y = 0.92
 	add_child(body)
+	var model_path: String = EXTERNAL_MODELS[variant % EXTERNAL_MODELS.size()]
+	if ResourceLoader.exists(model_path):
+		var imported_scene := load(model_path) as PackedScene
+		if imported_scene:
+			var imported_model := imported_scene.instantiate() as Node3D
+			if imported_model:
+				imported_model.name = "ImportedStalker"
+				imported_model.position = Vector3(0, -0.88, 0)
+				imported_model.rotation.y = PI
+				imported_model.scale = Vector3.ONE * 0.92
+				body.add_child(imported_model)
+				_play_imported_animation(imported_model)
+				eye_light = OmniLight3D.new()
+				eye_light.position = Vector3(0, 0.75, -0.42)
+				eye_light.light_color = accent
+				eye_light.light_energy = 0.75
+				eye_light.omni_range = 4.0
+				eye_light.shadow_enabled = false
+				body.add_child(eye_light)
+				return
 	_add_box(body, Vector3(0, 0.02, 0), Vector3(0.76, 0.94, 0.48), armor)
 	_add_box(body, Vector3(0, 0.52, -0.03), Vector3(0.54, 0.45, 0.48), metal)
 	head = Node3D.new()
@@ -68,6 +88,16 @@ func _build_robot() -> void:
 	eye_light.omni_range = 4.0
 	eye_light.shadow_enabled = false
 	body.add_child(eye_light)
+
+func _play_imported_animation(model: Node3D) -> void:
+	var animation_nodes := model.find_children("*", "AnimationPlayer", true, false)
+	for animation_node in animation_nodes:
+		var animation_player := animation_node as AnimationPlayer
+		if animation_player:
+			var animations := animation_player.get_animation_list()
+			if not animations.is_empty():
+				animation_player.play(animations[0])
+				return
 
 func _make_limb(parent: Node3D, pos: Vector3, size: Vector3, mat: Material) -> Node3D:
 	var pivot := Node3D.new()
