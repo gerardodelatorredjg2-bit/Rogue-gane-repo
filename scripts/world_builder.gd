@@ -172,6 +172,8 @@ func _build_kenney_props(map_index: int) -> void:
 	_add_kenney_model("pipe-straight", Vector3(-20.5, 2.4, -9), 1.1, PI * 0.5)
 	_add_kenney_model("pipe-straight", Vector3(20.5, 2.4, 7), 1.1, PI * 0.5)
 	_add_kenney_model("corridor-detailed", Vector3(0, 0, -18.0), 0.72, PI)
+	_add_kenney_model("corridor-wall", Vector3(-21.5, 0, -8.0), 0.82, PI * 0.5)
+	_add_kenney_model("corridor-wall", Vector3(21.5, 0, 8.0), 0.82, -PI * 0.5)
 	if map_index == 2 or map_index == 5:
 		_add_kenney_model("craft-cargoa", Vector3(12, 0, 13), 1.2, PI * 0.5)
 	if map_index == 0 or map_index == 4:
