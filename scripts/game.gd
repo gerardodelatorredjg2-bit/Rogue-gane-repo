@@ -656,16 +656,17 @@ func _create_hud() -> void:
 	reticle.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	ui_root.add_child(reticle)
 	threat_label = _label("●  MOTION SENSOR // QUIET", 10, Color(0.38, 0.84, 0.72))
-	threat_label.anchor_left = 0.025
-	threat_label.anchor_top = 0.925
-	threat_label.anchor_right = 0.48
-	threat_label.anchor_bottom = 0.97
+	threat_label.anchor_left = 0.31
+	threat_label.anchor_top = 0.105
+	threat_label.anchor_right = 0.69
+	threat_label.anchor_bottom = 0.15
+	threat_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	ui_root.add_child(threat_label)
 	prompt_label = _label("RECOVER THE SIGNAL  //  FIND THE SALVAGE", 12, Color(0.68, 0.96, 0.87))
 	prompt_label.anchor_left = 0.25
-	prompt_label.anchor_top = 0.84
+	prompt_label.anchor_top = 0.72
 	prompt_label.anchor_right = 0.75
-	prompt_label.anchor_bottom = 0.91
+	prompt_label.anchor_bottom = 0.79
 	prompt_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	prompt_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	ui_root.add_child(prompt_label)
