@@ -7,6 +7,7 @@ var noise_state: float = 0.0
 var playback: AudioStreamGeneratorPlayback
 
 func _ready() -> void:
+	bus = "Music"
 	var generator := AudioStreamGenerator.new()
 	generator.mix_rate = 22050.0
 	generator.buffer_length = 0.35
