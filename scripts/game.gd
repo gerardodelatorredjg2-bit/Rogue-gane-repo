@@ -1295,10 +1295,10 @@ func _open_settings() -> void:
 	settings_panel.anchor_top = 0.5
 	settings_panel.anchor_right = 0.5
 	settings_panel.anchor_bottom = 0.5
-	settings_panel.offset_left = -220
-	settings_panel.offset_top = -245
-	settings_panel.offset_right = 220
-	settings_panel.offset_bottom = 245
+	settings_panel.offset_left = -225
+	settings_panel.offset_top = -270
+	settings_panel.offset_right = 225
+	settings_panel.offset_bottom = 270
 	settings_panel.add_theme_stylebox_override("panel", _panel_style(Color(0.012, 0.035, 0.043, 0.99), Color(0.12, 0.83, 0.72)))
 	ui_root.add_child(settings_panel)
 	var outer := MarginContainer.new()
@@ -1307,9 +1307,13 @@ func _open_settings() -> void:
 	outer.add_theme_constant_override("margin_top", 14)
 	outer.add_theme_constant_override("margin_bottom", 14)
 	settings_panel.add_child(outer)
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	outer.add_child(scroll)
 	var stack := VBoxContainer.new()
-	stack.add_theme_constant_override("separation", 9)
-	outer.add_child(stack)
+	stack.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	stack.add_theme_constant_override("separation", 8)
+	scroll.add_child(stack)
 	var title := _label("SYSTEM SETTINGS", 20, Color(0.45, 0.98, 0.84))
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	stack.add_child(title)
@@ -1347,6 +1351,24 @@ func _open_settings() -> void:
 	sensitivity.step = 0.0001
 	sensitivity.value = float(settings_config.get_value("controls", "sensitivity", 0.0022))
 	stack.add_child(sensitivity)
+	stack.add_child(_label("KEYBOARD MOVEMENT", 10, Color(0.36, 0.79, 0.78)))
+	var key_layout := OptionButton.new()
+	key_layout.add_item("WASD")
+	key_layout.add_item("ARROW KEYS")
+	key_layout.select(move_key_layout)
+	stack.add_child(key_layout)
+	stack.add_child(_label("MOBILE BUTTON LAYOUT", 10, Color(0.36, 0.79, 0.78)))
+	var mobile_layout := OptionButton.new()
+	mobile_layout.add_item("STANDARD  /  MOVE LEFT")
+	mobile_layout.add_item("LEFT-HANDED  /  MOVE RIGHT")
+	mobile_layout.select(1 if mobile_left_handed else 0)
+	stack.add_child(mobile_layout)
+	stack.add_child(_label("VERTICAL LOOK", 10, Color(0.36, 0.79, 0.78)))
+	var invert_y_option := OptionButton.new()
+	invert_y_option.add_item("NORMAL")
+	invert_y_option.add_item("INVERTED")
+	invert_y_option.select(1 if invert_look_y else 0)
+	stack.add_child(invert_y_option)
 	var actions := HBoxContainer.new()
 	stack.add_child(actions)
 	var save := _button("SAVE SETTINGS", true)
@@ -1364,15 +1386,28 @@ func _open_settings() -> void:
 		settings_config.set_value("audio", "music", music_slider.value)
 		settings_config.set_value("video", "preset", quality.selected)
 		settings_config.set_value("controls", "sensitivity", sensitivity.value)
+		settings_config.set_value("controls", "key_layout", key_layout.selected)
+		settings_config.set_value("controls", "left_handed", mobile_layout.selected == 1)
+		settings_config.set_value("controls", "invert_y", invert_y_option.selected == 1)
 		settings_config.save("user://rogue_settings.cfg")
 		_apply_audio_setting("Master", master_slider.value)
 		_apply_audio_setting("Music", music_slider.value)
 		_apply_quality_setting(quality.selected)
+		move_key_layout = key_layout.selected
+		mobile_left_handed = mobile_layout.selected == 1
+		invert_look_y = invert_y_option.selected == 1
+		_apply_key_layout()
 		var local_player := _local_player()
 		if local_player:
 			local_player.look_sensitivity = sensitivity.value
+			local_player.invert_look_y = invert_look_y
 			local_player.publish_player_name(player_display_name)
+		if mobile_ui and is_instance_valid(mobile_ui):
+			mobile_ui.queue_free()
+			mobile_ui = null
+			_create_mobile_controls()
 		set_prompt("SETTINGS SAVED  //  PROFILE UPDATED")
+		_play_sfx("ui")
 	)
 	close.pressed.connect(func():
 		settings_panel.queue_free()
