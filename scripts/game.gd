@@ -49,6 +49,7 @@ var player_name: String = "CREWMATE"
 func _ready() -> void:
 	Engine.max_fps = 30 if OS.has_feature("mobile") else 60
 	_configure_input()
+	_load_user_settings()
 	_create_canvas()
 	_show_lobby()
 	set_process(true)
@@ -63,6 +64,16 @@ func _process(delta: float) -> void:
 		if hud_scan_clock >= 0.35:
 			hud_scan_clock = 0.0
 			_update_threat_indicator()
+
+func _load_user_settings() -> void:
+	var config := ConfigFile.new()
+	if config.load("user://rogue_settings.cfg") != OK:
+		return
+	player_name = str(config.get_value("player", "name", "CREWMATE"))
+	var bus := AudioServer.get_bus_index("Master")
+	if bus >= 0:
+		AudioServer.set_bus_volume_db(bus, linear_to_db(maxf(0.001, float(config.get_value("audio", "volume", 0.8)))))
+	Engine.max_fps = [30, 45, 60][clampi(int(config.get_value("video", "quality", 0)), 0, 2)]
 
 func _configure_input() -> void:
 	_add_key_action("move_forward", KEY_W)
@@ -343,6 +354,9 @@ func _spawn_player(peer_id: int, pos: Vector3) -> void:
 	player.name = "Player_%d" % peer_id
 	player.player_id = peer_id
 	player.game = self
+	var config := ConfigFile.new()
+	if config.load("user://rogue_settings.cfg") == OK:
+		player.look_sensitivity = float(config.get_value("controls", "sensitivity", 0.0022))
 	add_child(player)
 	player.global_position = pos
 	players[peer_id] = player
@@ -924,6 +938,10 @@ func _server_ship_purchase(item_id: String, player_id: int) -> void:
 		new_health = minf(100.0, new_health + 50.0)
 	elif item_id == "stamina":
 		new_stamina = 100.0
+	elif item_id == "lamp" and int(player.get("flashlight_level")) >= 2:
+		if player_id == multiplayer.get_unique_id(): set_prompt("LANTERN ALREADY AT MAXIMUM OUTPUT")
+		else: rpc_id(player_id, "ship_purchase_denied", "LANTERN ALREADY AT MAXIMUM OUTPUT")
+		return
 	sync_ship_purchase.rpc(credits, player_id, new_health, new_stamina, item_id)
 
 @rpc("authority", "call_remote", "reliable")
