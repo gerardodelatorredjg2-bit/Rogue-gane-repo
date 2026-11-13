@@ -202,4 +202,13 @@ func _animate_robot() -> void:
 	if head:
 		head.rotation.y = sin(animation_clock * 1.4) * (0.22 if state == "PATROL" else 0.05)
 	if eye_light:
-		eye_light.light_energy = 0.55 + absf(sin(animation_clock * 4.2)) * 0.55
+		var pulse := absf(sin(animation_clock * (9.0 if state == "HUNT" else 4.2)))
+		eye_light.light_energy = 0.45 + pulse * (1.0 if state == "HUNT" else 0.55)
+		if state == "HUNT":
+			eye_light.light_color = Color(1.0, 0.08, 0.035)
+	if attack_clock > 0.82 and body:
+		body.rotation.x = -0.24
+		if arm_left: arm_left.rotation.z = -0.62
+		if arm_right: arm_right.rotation.z = 0.62
+	elif body:
+		body.rotation.x = move_toward(body.rotation.x, 0.0, 0.08)
