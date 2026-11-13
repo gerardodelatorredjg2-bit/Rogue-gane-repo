@@ -43,11 +43,15 @@ var quota_bar: ProgressBar
 var threat_label: Label
 var hud_scan_clock: float = 0.0
 var terminal_panel: PanelContainer
+var settings_panel: PanelContainer
+var settings_config := ConfigFile.new()
+var player_display_name: String = "CREWMATE"
 
 func _ready() -> void:
 	Engine.max_fps = 30 if OS.has_feature("mobile") else 60
 	_configure_input()
 	_create_canvas()
+	_load_user_settings()
 	_show_lobby()
 	set_process(true)
 
@@ -105,6 +109,7 @@ func _clear_ui() -> void:
 	quota_bar = null
 	threat_label = null
 	terminal_panel = null
+	settings_panel = null
 
 func _show_lobby(message: String = "ALL SYSTEMS NOMINAL  //  LOCAL NETWORK READY") -> void:
 	_clear_ui()
@@ -184,6 +189,9 @@ func _show_lobby(message: String = "ALL SYSTEMS NOMINAL  //  LOCAL NETWORK READY
 	solo_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	solo_button.pressed.connect(_play_solo)
 	stack.add_child(solo_button)
+	var settings_button := _button("SETTINGS  /  PLAYER PROFILE", false)
+	settings_button.pressed.connect(_open_settings)
+	stack.add_child(settings_button)
 	lobby_status = _label(message, 11, Color(0.52, 0.72, 0.72))
 	lobby_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	lobby_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -609,6 +617,10 @@ func _create_hud() -> void:
 	bar.add_child(credits_label)
 	timer_label = _label("00:00", 14, Color(0.73, 0.87, 0.92))
 	bar.add_child(timer_label)
+	var settings_hud_button := _button("⚙", false)
+	settings_hud_button.custom_minimum_size = Vector2(48, 38)
+	settings_hud_button.pressed.connect(_open_settings)
+	bar.add_child(settings_hud_button)
 
 	var vitals := PanelContainer.new()
 	vitals.anchor_left = 0.02
@@ -813,6 +825,9 @@ func _create_mobile_controls() -> void:
 	_touch_button("USE", 0.86, 0.80, 0.94, 0.91, "interact_once", false)
 	_touch_button("LAMP", 0.86, 0.66, 0.94, 0.77, "flashlight_once", false)
 	_touch_button("JUMP", 0.76, 0.84, 0.84, 0.94, "jump")
+	_emote_button("DANCE", 0.39, 0.88, "dance")
+	_emote_button("WAVE", 0.48, 0.88, "wave")
+	_emote_button("CHEER", 0.57, 0.88, "cheer")
 	if movement:
 		movement.tooltip_text = "Movement pad"
 
@@ -843,6 +858,131 @@ func _touch_button(text_value: String, left: float, top: float, right: float, bo
 				player.set_mobile_action(action, false)
 		)
 	return button
+
+
+func _emote_button(caption: String, left: float, top: float, emote: String) -> void:
+	var button := _button(caption, false)
+	button.anchor_left = left
+	button.anchor_top = top
+	button.anchor_right = left + 0.085
+	button.anchor_bottom = top + 0.085
+	button.offset_left = 0
+	button.offset_top = 0
+	button.offset_right = 0
+	button.offset_bottom = 0
+	button.custom_minimum_size = Vector2(58, 42)
+	button.modulate = Color(0.78, 0.96, 0.92, 0.84)
+	mobile_ui.add_child(button)
+	button.pressed.connect(func():
+		var player := _local_player()
+		if player and player.has_method("play_emote"):
+			player.play_emote(emote)
+	)
+
+func _load_user_settings() -> void:
+	settings_config.load("user://rogue_settings.cfg")
+	player_display_name = str(settings_config.get_value("player", "name", "CREWMATE"))
+	if player_display_name.strip_edges().is_empty():
+		player_display_name = "CREWMATE"
+	_apply_audio_setting("Master", float(settings_config.get_value("audio", "master", 0.85)))
+	_apply_audio_setting("Music", float(settings_config.get_value("audio", "music", 0.65)))
+
+func _apply_audio_setting(bus_name: String, linear_value: float) -> void:
+	var bus_index := AudioServer.get_bus_index(bus_name)
+	if bus_index >= 0:
+		AudioServer.set_bus_volume_linear(bus_index, clampf(linear_value, 0.0, 1.0))
+
+func _open_settings() -> void:
+	if is_instance_valid(settings_panel):
+		return
+	settings_panel = PanelContainer.new()
+	settings_panel.anchor_left = 0.5
+	settings_panel.anchor_top = 0.5
+	settings_panel.anchor_right = 0.5
+	settings_panel.anchor_bottom = 0.5
+	settings_panel.offset_left = -220
+	settings_panel.offset_top = -245
+	settings_panel.offset_right = 220
+	settings_panel.offset_bottom = 245
+	settings_panel.add_theme_stylebox_override("panel", _panel_style(Color(0.012, 0.035, 0.043, 0.99), Color(0.12, 0.83, 0.72)))
+	ui_root.add_child(settings_panel)
+	var outer := MarginContainer.new()
+	outer.add_theme_constant_override("margin_left", 18)
+	outer.add_theme_constant_override("margin_right", 18)
+	outer.add_theme_constant_override("margin_top", 14)
+	outer.add_theme_constant_override("margin_bottom", 14)
+	settings_panel.add_child(outer)
+	var stack := VBoxContainer.new()
+	stack.add_theme_constant_override("separation", 9)
+	outer.add_child(stack)
+	var title := _label("SYSTEM SETTINGS", 20, Color(0.45, 0.98, 0.84))
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	stack.add_child(title)
+	stack.add_child(_label("PLAYER NAME", 10, Color(0.36, 0.79, 0.78)))
+	var name_input := LineEdit.new()
+	name_input.text = player_display_name
+	name_input.max_length = 18
+	name_input.custom_minimum_size.y = 38
+	stack.add_child(name_input)
+	stack.add_child(_label("MASTER VOLUME", 10, Color(0.36, 0.79, 0.78)))
+	var master_slider := HSlider.new()
+	master_slider.min_value = 0.0
+	master_slider.max_value = 1.0
+	master_slider.step = 0.05
+	master_slider.value = float(settings_config.get_value("audio", "master", 0.85))
+	stack.add_child(master_slider)
+	stack.add_child(_label("MUSIC VOLUME", 10, Color(0.36, 0.79, 0.78)))
+	var music_slider := HSlider.new()
+	music_slider.min_value = 0.0
+	music_slider.max_value = 1.0
+	music_slider.step = 0.05
+	music_slider.value = float(settings_config.get_value("audio", "music", 0.65))
+	stack.add_child(music_slider)
+	stack.add_child(_label("GRAPHICS PRESET  /  FPS LIMIT", 10, Color(0.36, 0.79, 0.78)))
+	var quality := OptionButton.new()
+	quality.add_item("LOW  /  30 FPS")
+	quality.add_item("BALANCED  /  45 FPS")
+	quality.add_item("HIGH  /  60 FPS")
+	quality.select(int(settings_config.get_value("video", "preset", 1)))
+	stack.add_child(quality)
+	stack.add_child(_label("LOOK SENSITIVITY", 10, Color(0.36, 0.79, 0.78)))
+	var sensitivity := HSlider.new()
+	sensitivity.min_value = 0.0010
+	sensitivity.max_value = 0.0045
+	sensitivity.step = 0.0001
+	sensitivity.value = float(settings_config.get_value("controls", "sensitivity", 0.0022))
+	stack.add_child(sensitivity)
+	var actions := HBoxContainer.new()
+	stack.add_child(actions)
+	var save := _button("SAVE SETTINGS", true)
+	save.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	actions.add_child(save)
+	var close := _button("CLOSE", false)
+	close.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	actions.add_child(close)
+	save.pressed.connect(func():
+		player_display_name = name_input.text.strip_edges().substr(0, 18)
+		if player_display_name.is_empty():
+			player_display_name = "CREWMATE"
+		settings_config.set_value("player", "name", player_display_name)
+		settings_config.set_value("audio", "master", master_slider.value)
+		settings_config.set_value("audio", "music", music_slider.value)
+		settings_config.set_value("video", "preset", quality.selected)
+		settings_config.set_value("controls", "sensitivity", sensitivity.value)
+		settings_config.save("user://rogue_settings.cfg")
+		_apply_audio_setting("Master", master_slider.value)
+		_apply_audio_setting("Music", music_slider.value)
+		Engine.max_fps = [30, 45, 60][quality.selected]
+		var local_player := _local_player()
+		if local_player:
+			local_player.look_sensitivity = sensitivity.value
+			local_player.set_player_name(player_display_name)
+		set_prompt("SETTINGS SAVED  //  PROFILE UPDATED")
+	)
+	close.pressed.connect(func():
+		settings_panel.queue_free()
+		settings_panel = null
+	)
 
 func _local_player() -> SalvagePlayer:
 	var id := multiplayer.get_unique_id()
