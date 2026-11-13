@@ -961,6 +961,219 @@ func sync_ship_purchase(new_credits: int, player_id: int, new_health: float, new
 		terminal_panel.queue_free()
 		terminal_panel = null
 
+func toggle_inventory(player_id: int) -> void:
+	if player_id != multiplayer.get_unique_id():
+		return
+	if is_instance_valid(inventory_panel):
+		inventory_panel.queue_free()
+		inventory_panel = null
+		return
+	open_inventory(player_id)
+
+func open_inventory(player_id: int) -> void:
+	if player_id != multiplayer.get_unique_id() or is_instance_valid(inventory_panel):
+		return
+	inventory_panel = PanelContainer.new()
+	inventory_panel.anchor_left = 0.5
+	inventory_panel.anchor_top = 0.5
+	inventory_panel.anchor_right = 0.5
+	inventory_panel.anchor_bottom = 0.5
+	inventory_panel.offset_left = -225
+	inventory_panel.offset_top = -205
+	inventory_panel.offset_right = 225
+	inventory_panel.offset_bottom = 205
+	inventory_panel.add_theme_stylebox_override("panel", _panel_style(Color(0.008, 0.025, 0.035, 0.985), Color(0.10, 0.76, 0.77)))
+	ui_root.add_child(inventory_panel)
+	var outer := MarginContainer.new()
+	outer.add_theme_constant_override("margin_left", 16)
+	outer.add_theme_constant_override("margin_right", 16)
+	outer.add_theme_constant_override("margin_top", 12)
+	outer.add_theme_constant_override("margin_bottom", 12)
+	inventory_panel.add_child(outer)
+	var stack := VBoxContainer.new()
+	stack.add_theme_constant_override("separation", 9)
+	outer.add_child(stack)
+	var title := _label("PERSONAL LOADOUT  //  FIELD GEAR", 18, Color(0.45, 0.98, 0.84))
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	stack.add_child(title)
+	var inventory: Dictionary = player_inventories.get(player_id, _default_inventory())
+	var slot_text := _label("SLOTS  %d / %d     //     CREDITS  ¢%d" % [_inventory_count(player_id), _inventory_slot_limit(), credits], 11, Color(0.98, 0.72, 0.32))
+	slot_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	stack.add_child(slot_text)
+	var list := VBoxContainer.new()
+	list.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	list.add_theme_constant_override("separation", 8)
+	stack.add_child(list)
+	for item_id in INVENTORY_ITEMS:
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 8)
+		list.add_child(row)
+		var count := int(inventory.get(item_id, 0))
+		var item_name := _label("%s   x%d" % [ITEM_LABELS[item_id], count], 12, Color(0.78, 0.91, 0.92))
+		item_name.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(item_name)
+		var captured_item_id := item_id
+		var use_button := _button("USE", true)
+		use_button.custom_minimum_size = Vector2(72, 38)
+		use_button.disabled = count <= 0
+		use_button.pressed.connect(func(): request_use_inventory_item(captured_item_id, player_id))
+		row.add_child(use_button)
+		var drop_button := _button("DROP", false)
+		drop_button.custom_minimum_size = Vector2(72, 38)
+		drop_button.disabled = count <= 0
+		drop_button.pressed.connect(func(): request_drop_inventory_item(captured_item_id, player_id))
+		row.add_child(drop_button)
+	var instructions := _label("I / BAG: OPEN   •   E: PICK UP   •   F: FLASHLIGHT", 9, Color(0.47, 0.65, 0.70))
+	instructions.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	stack.add_child(instructions)
+	var close := _button("CLOSE INVENTORY", false)
+	close.pressed.connect(func():
+		if is_instance_valid(inventory_panel):
+			inventory_panel.queue_free()
+		inventory_panel = null
+	)
+	stack.add_child(close)
+
+func _refresh_inventory_panel() -> void:
+	if not is_instance_valid(inventory_panel):
+		return
+	inventory_panel.queue_free()
+	inventory_panel = null
+	open_inventory(multiplayer.get_unique_id())
+
+func request_use_inventory_item(item_id: String, player_id: int) -> void:
+	if multiplayer.is_server():
+		_server_use_inventory_item(item_id, player_id)
+	else:
+		rpc_id(1, "server_use_inventory_item", item_id, player_id)
+
+@rpc("any_peer", "reliable")
+func server_use_inventory_item(item_id: String, player_id: int) -> void:
+	if not multiplayer.is_server() or multiplayer.get_remote_sender_id() != player_id:
+		return
+	_server_use_inventory_item(item_id, player_id)
+
+func _server_use_inventory_item(item_id: String, player_id: int) -> void:
+	if round_finished or not players.has(player_id) or item_id not in INVENTORY_ITEMS:
+		return
+	var inventory: Dictionary = player_inventories.get(player_id, _default_inventory()).duplicate(true)
+	if int(inventory.get(item_id, 0)) <= 0:
+		return
+	var player: Node = players[player_id]
+	var new_health := float(player.health)
+	var new_stamina := float(player.stamina)
+	var new_battery := float(player.flashlight_charge)
+	var new_scan_time := scanner_until
+	if item_id == "medkit":
+		if new_health >= 100.0:
+			_deny_shop_purchase(player_id, "INTEGRITY ALREADY FULL")
+			return
+		new_health = minf(100.0, new_health + 45.0)
+	elif item_id == "battery":
+		if new_battery >= 100.0:
+			_deny_shop_purchase(player_id, "FLASHLIGHT CELL ALREADY FULL")
+			return
+		new_battery = minf(100.0, new_battery + 70.0)
+	elif item_id == "scanner":
+		new_scan_time = maxf(new_scan_time, shift_seconds) + 12.0
+	inventory[item_id] = int(inventory[item_id]) - 1
+	player_inventories[player_id] = inventory
+	sync_inventory_use.rpc(player_id, item_id, new_health, new_stamina, new_battery, new_scan_time, inventory)
+
+@rpc("authority", "call_local", "reliable")
+func sync_inventory_use(player_id: int, item_id: String, new_health: float, new_stamina: float, new_battery: float, new_scan_time: float, inventory: Dictionary) -> void:
+	player_inventories[player_id] = inventory.duplicate(true)
+	scanner_until = new_scan_time
+	if players.has(player_id) and is_instance_valid(players[player_id]):
+		var player: Node = players[player_id]
+		player.health = new_health
+		player.stamina = new_stamina
+		player.flashlight_charge = new_battery
+		if item_id == "battery" and player.flashlight:
+			player.flashlight.visible = new_battery > 0.0
+	if player_id == multiplayer.get_unique_id():
+		_refresh_inventory_panel()
+	_play_sfx("pickup")
+	var item_label := ITEM_LABELS.get(item_id, item_id.to_upper())
+	set_prompt("ITEM USED  //  " + item_label)
+
+func request_drop_inventory_item(item_id: String, player_id: int) -> void:
+	if multiplayer.is_server():
+		_server_drop_inventory_item(item_id, player_id)
+	else:
+		rpc_id(1, "server_drop_inventory_item", item_id, player_id)
+
+@rpc("any_peer", "reliable")
+func server_drop_inventory_item(item_id: String, player_id: int) -> void:
+	if not multiplayer.is_server() or multiplayer.get_remote_sender_id() != player_id:
+		return
+	_server_drop_inventory_item(item_id, player_id)
+
+func _server_drop_inventory_item(item_id: String, player_id: int) -> void:
+	if round_finished or not players.has(player_id) or item_id not in INVENTORY_ITEMS:
+		return
+	var inventory: Dictionary = player_inventories.get(player_id, _default_inventory()).duplicate(true)
+	if int(inventory.get(item_id, 0)) <= 0:
+		return
+	var player: Node = players[player_id]
+	var forward := -player.view_camera.global_transform.basis.z
+	var drop_position := player.global_position + forward * 1.1 + Vector3.UP * 1.0
+	var launch_velocity := forward * 3.0 + Vector3.UP * 2.1
+	inventory[item_id] = int(inventory[item_id]) - 1
+	player_inventories[player_id] = inventory
+	sync_player_inventory.rpc(player_id, inventory)
+	dropped_counter += 1
+	var drop_id := "drop_%06d" % dropped_counter
+	spawn_dropped_item.rpc(drop_id, item_id, drop_position, launch_velocity)
+
+@rpc("authority", "call_local", "reliable")
+func spawn_dropped_item(drop_id: String, item_id: String, position: Vector3, initial_velocity: Vector3) -> void:
+	var dropped = DroppedItemScript.new()
+	dropped.name = drop_id
+	dropped.drop_id = drop_id
+	dropped.item_kind = item_id
+	add_child(dropped)
+	dropped.global_position = position
+	dropped.linear_velocity = initial_velocity
+	dropped.angular_velocity = Vector3(1.8, 2.2, 1.1)
+
+func request_pickup_dropped_item(drop_id: String, player_id: int) -> void:
+	if multiplayer.is_server():
+		_server_pickup_dropped_item(drop_id, player_id)
+	else:
+		rpc_id(1, "server_pickup_dropped_item", drop_id, player_id)
+
+@rpc("any_peer", "reliable")
+func server_pickup_dropped_item(drop_id: String, player_id: int) -> void:
+	if not multiplayer.is_server() or multiplayer.get_remote_sender_id() != player_id:
+		return
+	_server_pickup_dropped_item(drop_id, player_id)
+
+func _server_pickup_dropped_item(drop_id: String, player_id: int) -> void:
+	if round_finished or not players.has(player_id) or _inventory_count(player_id) >= _inventory_slot_limit():
+		return
+	var target: Node3D
+	for item in get_tree().get_nodes_in_group("dropped_items"):
+		if is_instance_valid(item) and str(item.get("drop_id")) == drop_id:
+			target = item
+			break
+	if target == null or players[player_id].global_position.distance_to(target.global_position) > 4.5:
+		return
+	var item_kind := str(target.get("item_kind"))
+	var inventory: Dictionary = player_inventories.get(player_id, _default_inventory()).duplicate(true)
+	inventory[item_kind] = int(inventory.get(item_kind, 0)) + 1
+	player_inventories[player_id] = inventory
+	sync_player_inventory.rpc(player_id, inventory)
+	remove_dropped_item.rpc(drop_id)
+	set_prompt("GEAR RECOVERED  //  " + item_kind.to_upper())
+
+@rpc("authority", "call_local", "reliable")
+func remove_dropped_item(drop_id: String) -> void:
+	for item in get_tree().get_nodes_in_group("dropped_items"):
+		if is_instance_valid(item) and str(item.get("drop_id")) == drop_id:
+			item.queue_free()
+			return
+
 func _create_mobile_controls() -> void:
 	mobile_visible = OS.has_feature("mobile")
 	mobile_ui = Control.new()
