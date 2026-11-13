@@ -26,6 +26,15 @@ func set_player_name(value: String) -> void:
 	if is_instance_valid(name_tag):
 		name_tag.text = value.substr(0, 18)
 
+func publish_player_name(value: String) -> void:
+	set_player_name(value)
+	if not is_multiplayer_authority() or not multiplayer.has_multiplayer_peer():
+		return
+	if multiplayer.is_server():
+		rpc("sync_player_name", player_id, value)
+	else:
+		rpc_id(1, "server_set_player_name", value)
+
 func play_emote(value: String) -> void:
 	if not is_multiplayer_authority() or is_dead:
 		return
