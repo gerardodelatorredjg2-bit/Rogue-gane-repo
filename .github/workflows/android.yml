@@ -3,6 +3,8 @@ name: Android APK
 on:
   push:
     branches: [main, feature/major-horror-overhaul]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
