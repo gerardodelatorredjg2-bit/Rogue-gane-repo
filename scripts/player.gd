@@ -152,6 +152,8 @@ func _physics_process(delta: float) -> void:
 		_send_network_state()
 	if Input.is_action_just_pressed("interact") or consume_mobile_action("interact_once"):
 		_interact()
+	if Input.is_action_just_pressed("inventory") and game and game.has_method("open_inventory"):
+		game.call("open_inventory")
 	if Input.is_action_just_pressed("flashlight") or consume_mobile_action("flashlight_once"):
 		flashlight.visible = not flashlight.visible
 	if Input.is_action_just_pressed("emote_dance") or consume_mobile_action("emote_dance"):
