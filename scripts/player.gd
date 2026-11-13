@@ -40,10 +40,21 @@ func play_emote(value: String) -> void:
 		return
 	if velocity.length() > 0.35:
 		return
-	emote_name = value
-	emote_time = 2.2
+	_apply_emote(value)
+	if multiplayer.has_multiplayer_peer():
+		rpc("sync_emote", value)
 	if game and game.has_method("set_prompt"):
 		game.set_prompt("CREW EMOTE  //  " + value.to_upper())
+
+func _apply_emote(value: String) -> void:
+	if value not in ["dance", "wave", "cheer"]:
+		return
+	emote_name = value
+	emote_time = 2.2
+
+@rpc("any_peer", "call_local", "reliable")
+func sync_emote(value: String) -> void:
+	_apply_emote(value)
 
 
 func _ready() -> void:
