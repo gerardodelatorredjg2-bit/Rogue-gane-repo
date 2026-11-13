@@ -122,11 +122,27 @@ func _load_sfx_library() -> void:
 func _play_sfx(keyword: String = "") -> void:
 	if sfx_files.is_empty() or not is_instance_valid(sfx_player):
 		return
+	var filters: Array[String] = []
+	match keyword.to_lower():
+		"ui":
+			filters = ["computernoise", "forcefield"]
+		"pickup":
+			filters = ["forcefield", "lasersmall"]
+		"impact":
+			filters = ["impactmetal", "explosioncrunch"]
+		_:
+			if not keyword.is_empty():
+				filters = [keyword.to_lower()]
 	var candidates: Array[String] = []
 	for file_name in sfx_files:
-		if keyword.is_empty() or file_name.to_lower().contains(keyword.to_lower()):
-			candidates.append(file_name)
-	var chosen := candidates[randi_range(0, candidates.size() - 1)] if not candidates.is_empty() else sfx_files[randi_range(0, sfx_files.size() - 1)]
+		var normalized := file_name.to_lower()
+		for filter_text in filters:
+			if normalized.contains(filter_text):
+				candidates.append(file_name)
+				break
+	if candidates.is_empty():
+		candidates = sfx_files
+	var chosen := candidates[randi_range(0, candidates.size() - 1)]
 	var stream := load("res://assets/audio/kenney_sci_fi/%s" % chosen) as AudioStream
 	if stream:
 		sfx_player.stream = stream
