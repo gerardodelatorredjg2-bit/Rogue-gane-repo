@@ -147,15 +147,10 @@ func _build_props(map_index: int) -> void:
 func _industrial_material() -> StandardMaterial3D:
 	var mat := _mat(Color(0.74, 0.78, 0.76), 0.58, 0.82)
 	var diffuse_path := "res://assets/textures/industrial/rusty_painted_metal_diff_1k.jpg"
-	var normal_path := "res://assets/textures/industrial/rusty_painted_metal_nor_gl_1k.jpg"
 	var rough_path := "res://assets/textures/industrial/rusty_painted_metal_rough_1k.jpg"
 	if ResourceLoader.exists(diffuse_path):
 		mat.albedo_texture = load(diffuse_path) as Texture2D
 		mat.uv1_scale = Vector3(3.0, 3.0, 1.0)
-	if ResourceLoader.exists(normal_path):
-		mat.normal_enabled = true
-		mat.normal_texture = load(normal_path) as Texture2D
-		mat.normal_scale = 0.38
 	if ResourceLoader.exists(rough_path):
 		mat.roughness_texture = load(rough_path) as Texture2D
 		mat.roughness = 0.82
