@@ -1070,7 +1070,7 @@ func _server_use_inventory_item(item_id: String, player_id: int) -> void:
 	var inventory: Dictionary = player_inventories.get(player_id, _default_inventory()).duplicate(true)
 	if int(inventory.get(item_id, 0)) <= 0:
 		return
-	var player: Node = players[player_id]
+	var player := players[player_id] as SalvagePlayer
 	var new_health := float(player.health)
 	var new_stamina := float(player.stamina)
 	var new_battery := float(player.flashlight_charge)
@@ -1096,7 +1096,7 @@ func sync_inventory_use(player_id: int, item_id: String, new_health: float, new_
 	player_inventories[player_id] = inventory.duplicate(true)
 	scanner_until = new_scan_time
 	if players.has(player_id) and is_instance_valid(players[player_id]):
-		var player: Node = players[player_id]
+		var player := players[player_id] as SalvagePlayer
 		player.health = new_health
 		player.stamina = new_stamina
 		player.flashlight_charge = new_battery
