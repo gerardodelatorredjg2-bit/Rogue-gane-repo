@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: android-apk-${{ github.ref }}
@@ -77,3 +77,19 @@ jobs:
           path: build/RogueMachines.apk
           if-no-files-found: error
           retention-days: 30
+
+      - name: Publish public Android APK release
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: android-latest
+          name: Latest Android APK
+          body: |
+            Automated debug build of ROGUE MACHINES: LOST SIGNAL.
+            Install on a compatible Android device. LAN multiplayer requires the same Wi-Fi network or hotspot.
+          files: build/RogueMachines.apk
+          fail_on_unmatched_files: true
+          overwrite_files: true
+          make_latest: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
