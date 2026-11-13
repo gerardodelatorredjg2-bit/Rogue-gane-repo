@@ -194,6 +194,7 @@ func _build_ship(pos: Vector3) -> void:
 		_make_box("ShipHazardStripe", pos + Vector3(side * 3.97, 0.36, -2.0), Vector3(0.025, 0.04, 1.4), warning, false)
 	_make_box("ShipConsole", pos + Vector3(0, 1.05, -2.65), Vector3(1.5, 1.0, 0.45), hull, false)
 	_make_box("ShipConsoleScreen", pos + Vector3(0, 1.62, -2.69), Vector3(1.1, 0.42, 0.06), glass, false)
+	_make_ship_terminal(pos + Vector3(0, 0, -2.65), hull, glass)
 	_make_box("ShipCeilingLight", pos + Vector3(0, 2.20, 0.0), Vector3(2.8, 0.07, 0.18), _mat(accent, 0.2, 0.28, true), false)
 	var beacon := OmniLight3D.new()
 	beacon.position = pos + Vector3(0, 2.7, 0)
@@ -203,6 +204,33 @@ func _build_ship(pos: Vector3) -> void:
 	beacon.shadow_enabled = false
 	root.add_child(beacon)
 	_make_box("ShipCallsign", pos + Vector3(0, 2.48, 3.18), Vector3(2.4, 0.16, 0.08), warning, false)
+
+func _make_ship_terminal(pos: Vector3, hull: Material, screen: Material) -> void:
+	var terminal := StaticBody3D.new()
+	terminal.name = "ShipServiceTerminal"
+	terminal.position = pos + Vector3(0, 1.05, 0)
+	terminal.collision_layer = 2
+	terminal.collision_mask = 1
+	terminal.add_to_group("ship_terminal")
+	var visual := MeshInstance3D.new()
+	var mesh := BoxMesh.new()
+	mesh.size = Vector3(1.55, 1.05, 0.48)
+	visual.mesh = mesh
+	visual.material_override = hull
+	terminal.add_child(visual)
+	var display := MeshInstance3D.new()
+	var display_mesh := BoxMesh.new()
+	display_mesh.size = Vector3(0.92, 0.36, 0.035)
+	display.mesh = display_mesh
+	display.position = Vector3(0, 0.27, -0.255)
+	display.material_override = screen
+	terminal.add_child(display)
+	var collision := CollisionShape3D.new()
+	var shape := BoxShape3D.new()
+	shape.size = Vector3(1.6, 1.1, 0.5)
+	collision.shape = shape
+	terminal.add_child(collision)
+	root.add_child(terminal)
 
 func _build_hazard_details(map_index: int) -> void:
 	var pipe_mat := _mat(Color(0.22, 0.29, 0.31), 0.88, 0.28)
