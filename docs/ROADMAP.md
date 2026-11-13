@@ -27,12 +27,15 @@
 ## Milestone 0.3 — art and sound pass
 
 - [x] Add a modular procedural drop-ship and industrial horror dressing
-- [x] Add a ship service terminal with server-validated suit repair and stamina recharge purchases\n- [x] Wire four rigged CC0 robot GLBs into the enemy loader and Android build pipeline
+- [x] Add a ship service terminal with server-validated suit repair and stamina recharge purchases
+- [x] Wire four rigged CC0 robot GLBs into the enemy loader and Android build pipeline
 - [x] Add licensed Kenney Space Kit props and Poly Haven CC0 wall textures
 - [ ] Replace procedural robot parts with rigged, attributed robot models where useful
-- [x] Add a lightweight procedural industrial hum placeholder\n- [x] Add Kenney CC0 sci-fi one-shot effects for gameplay/UI and 3D stalker cues
+- [x] Add a lightweight procedural industrial hum placeholder
+- [x] Add Kenney CC0 sci-fi one-shot effects for gameplay/UI and 3D stalker cues
 - [ ] Add footsteps, sustained machinery loops and radio interference
-- [x] Add industrial warning stripes, service panels, signage and revised telemetry HUD\n- [x] Add player profile name, settings panel, audio sliders, FPS/render-scale presets and look sensitivity
+- [x] Add industrial warning stripes, service panels, signage and revised telemetry HUD
+- [x] Add player profile name, settings panel, audio sliders, FPS/render-scale presets and look sensitivity
 - [x] Add three basic crew emotes with LAN synchronization
 - [x] Add original ROGUE MACHINES launcher icon and adaptive Android icon variants
 - [ ] Add title screen motion, decals, grime and improved VFX
