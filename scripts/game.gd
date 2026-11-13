@@ -143,7 +143,7 @@ func sync_player_inventory(player_id: int, inventory: Dictionary) -> void:
 func sync_ship_upgrades(upgrades: Dictionary) -> void:
 	ship_upgrades = upgrades.duplicate(true)
 	for peer_id in players.keys():
-		var player: Node = players[peer_id]
+		var player := players[peer_id] as SalvagePlayer
 		if is_instance_valid(player):
 			player.move_speed_multiplier = 1.0 + float(ship_upgrades.get("engine", 0)) * 0.05
 			player.damage_resistance = minf(0.35, float(ship_upgrades.get("hull", 0)) * 0.06)
@@ -962,8 +962,9 @@ func ship_purchase_denied(message: String) -> void:
 func sync_ship_purchase(new_credits: int, player_id: int, new_health: float, new_stamina: float, item_id: String) -> void:
 	credits = new_credits
 	if players.has(player_id) and is_instance_valid(players[player_id]):
-		players[player_id].health = new_health
-		players[player_id].stamina = new_stamina
+		var player := players[player_id] as SalvagePlayer
+		player.health = new_health
+		player.stamina = new_stamina
 	_update_hud()
 	_play_sfx("ui")
 	var item_label := str(SHOP_CATALOG.get(item_id, {}).get("label", item_id))
@@ -1126,7 +1127,7 @@ func _server_drop_inventory_item(item_id: String, player_id: int) -> void:
 	var inventory: Dictionary = player_inventories.get(player_id, _default_inventory()).duplicate(true)
 	if int(inventory.get(item_id, 0)) <= 0:
 		return
-	var player: Node = players[player_id]
+	var player := players[player_id] as SalvagePlayer
 	var forward := -player.view_camera.global_transform.basis.z
 	var drop_position := player.global_position + forward * 1.1 + Vector3.UP * 1.0
 	var launch_velocity := forward * 3.0 + Vector3.UP * 2.1
