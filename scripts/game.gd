@@ -424,7 +424,8 @@ func _clear_world() -> void:
 
 func _spawn_initial_enemies() -> void:
 	var locations: Array = world_info.get("enemy_spawns", [])
-	for i in range(mini(3, locations.size())):
+	var director_count := mini(locations.size(), 3 + int((round_index - 1) / 2))
+	for i in range(director_count):
 		receive_enemy_spawn.rpc("hunter_%02d" % i, locations[i], i % 3)
 
 func _spawn_player(peer_id: int, pos: Vector3) -> void:
@@ -624,8 +625,8 @@ func _next_shift() -> void:
 	current_map = (current_map + 1) % WorldBuilderScript.MAP_NAMES.size()
 	session_seed = randi()
 	collected = 0
-	quota = DEFAULT_QUOTA + int(round_index / 3)
 	round_index += 1
+	quota = DEFAULT_QUOTA + round_index - 1
 	receive_session_config.rpc(current_map, session_seed, quota, credits, round_index, collected, [])
 	for peer_id in players.keys():
 		teleport_player.rpc(int(peer_id), _spawn_position_for(int(peer_id)))
