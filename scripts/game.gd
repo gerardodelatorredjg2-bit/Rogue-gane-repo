@@ -4,10 +4,23 @@ const PlayerScript = preload("res://scripts/player.gd")
 const EnemyScript = preload("res://scripts/enemy.gd")
 const WorldBuilderScript = preload("res://scripts/world_builder.gd")
 const AmbienceScript = preload("res://scripts/ambience.gd")
+const DroppedItemScript = preload("res://scripts/dropped_item.gd")
 
 const GAME_PORT := 28960
 const MAX_CLIENTS := 4
 const DEFAULT_QUOTA := 6
+const INVENTORY_ITEMS := ["medkit", "battery", "scanner"]
+const ITEM_LABELS := {"medkit": "MEDKIT", "battery": "FLASHLIGHT CELL", "scanner": "MOTION SCANNER"}
+const SHOP_CATALOG := {
+	"repair": {"cost": 25, "label": "SUIT PATCH  +50 INTEGRITY", "kind": "service"},
+	"stamina": {"cost": 15, "label": "STAMINA RECHARGE", "kind": "service"},
+	"medkit": {"cost": 40, "label": "MEDKIT  +1", "kind": "item"},
+	"battery": {"cost": 25, "label": "FLASHLIGHT CELL  +1", "kind": "item"},
+	"scanner": {"cost": 55, "label": "MOTION SCANNER  +1", "kind": "item"},
+	"hull": {"cost": 120, "label": "HULL REINFORCEMENT  +1", "kind": "upgrade"},
+	"storage": {"cost": 90, "label": "CARGO RACK  +2 SLOTS", "kind": "upgrade"},
+	"engine": {"cost": 140, "label": "ENGINE TUNING  +5% SPEED", "kind": "upgrade"}
+}
 
 var current_map: int = 0
 var session_seed: int = 73191
@@ -21,6 +34,12 @@ var round_finished: bool = false
 var world_info: Dictionary = {}
 var players: Dictionary = {}
 var enemies: Dictionary = {}
+var player_inventories: Dictionary = {}
+var ship_upgrades: Dictionary = {"hull": 0, "storage": 0, "engine": 0}
+var scanner_until: float = 0.0
+var dropped_counter: int = 0
+var sfx_files: Array[String] = []
+var sfx_player: AudioStreamPlayer
 var canvas: CanvasLayer
 var ui_root: Control
 var status_label: Label
@@ -28,6 +47,7 @@ var objective_label: Label
 var credits_label: Label
 var health_label: Label
 var stamina_label: Label
+var battery_label: Label
 var prompt_label: Label
 var map_label: Label
 var timer_label: Label
@@ -43,6 +63,7 @@ var quota_bar: ProgressBar
 var threat_label: Label
 var hud_scan_clock: float = 0.0
 var terminal_panel: PanelContainer
+var inventory_panel: PanelContainer
 var settings_panel: PanelContainer
 var settings_config := ConfigFile.new()
 var player_display_name: String = "CREWMATE"
@@ -51,6 +72,7 @@ func _ready() -> void:
 	Engine.max_fps = 30 if OS.has_feature("mobile") else 60
 	_configure_input()
 	_create_canvas()
+	_load_sfx_library()
 	_load_user_settings()
 	_show_lobby()
 	set_process(true)
@@ -75,6 +97,7 @@ func _configure_input() -> void:
 	_add_key_action("sprint", KEY_SHIFT)
 	_add_key_action("interact", KEY_E)
 	_add_key_action("flashlight", KEY_F)
+	_add_key_action("inventory", KEY_I)
 
 func _add_key_action(action: String, key: Key) -> void:
 	if not InputMap.has_action(action):
@@ -99,6 +122,7 @@ func _clear_ui() -> void:
 	credits_label = null
 	health_label = null
 	stamina_label = null
+	battery_label = null
 	prompt_label = null
 	map_label = null
 	timer_label = null
@@ -109,6 +133,7 @@ func _clear_ui() -> void:
 	quota_bar = null
 	threat_label = null
 	terminal_panel = null
+	inventory_panel = null
 	settings_panel = null
 
 func _show_lobby(message: String = "ALL SYSTEMS NOMINAL  //  LOCAL NETWORK READY") -> void:
@@ -273,6 +298,8 @@ func _on_peer_connected(peer_id: int) -> void:
 		var existing: Node3D = players[existing_id]
 		if is_instance_valid(existing):
 			rpc_id(peer_id, "receive_spawn_player", int(existing_id), existing.global_position)
+			rpc_id(peer_id, "sync_player_inventory", int(existing_id), player_inventories.get(existing_id, _default_inventory()))
+	rpc_id(peer_id, "sync_ship_upgrades", ship_upgrades)
 	var spawn := _spawn_position_for(peer_id)
 	receive_spawn_player.rpc(peer_id, spawn)
 	for enemy_id in enemies.keys():
@@ -287,6 +314,7 @@ func _on_peer_disconnected(peer_id: int) -> void:
 		if is_instance_valid(node):
 			node.queue_free()
 		players.erase(peer_id)
+		player_inventories.erase(peer_id)
 		remove_player.rpc(peer_id)
 
 func _local_ipv4_addresses() -> String:
@@ -338,11 +366,15 @@ func _spawn_initial_enemies() -> void:
 func _spawn_player(peer_id: int, pos: Vector3) -> void:
 	if players.has(peer_id) and is_instance_valid(players[peer_id]):
 		return
+	if not player_inventories.has(peer_id):
+		player_inventories[peer_id] = _default_inventory()
 	var player = PlayerScript.new()
 	player.name = "Player_%d" % peer_id
 	player.player_id = peer_id
 	player.game = self
 	player.look_sensitivity = float(settings_config.get_value("controls", "sensitivity", 0.0022))
+	player.move_speed_multiplier = 1.0 + float(ship_upgrades.get("engine", 0)) * 0.05
+	player.damage_resistance = minf(0.35, float(ship_upgrades.get("hull", 0)) * 0.06)
 	add_child(player)
 	player.global_position = pos
 	players[peer_id] = player
@@ -1008,6 +1040,7 @@ func _disconnect_to_menu() -> void:
 		if is_instance_valid(player):
 			player.queue_free()
 	players.clear()
+	player_inventories.clear()
 	_clear_world()
 	_show_lobby("SESSION CLOSED  //  READY FOR NEXT DEPLOYMENT")
 
