@@ -17,6 +17,8 @@ var flashlight_charge: float = 100.0
 var move_speed_multiplier: float = 1.0
 var damage_resistance: float = 0.0
 var invert_look_y: bool = false
+var last_remote_visual_position := Vector3.ZERO
+var remote_movement_hold: float = 0.0
 var body_visual: Node3D
 var left_arm: Node3D
 var right_arm: Node3D
@@ -76,6 +78,7 @@ func _ready() -> void:
 	collider.position.y = 0.9
 	add_child(collider)
 	_build_character()
+	last_remote_visual_position = global_position
 	var profile := ConfigFile.new()
 	profile.load("user://rogue_settings.cfg")
 	var configured_name := str(profile.get_value("player", "name", "CREWMATE"))
@@ -245,38 +248,7 @@ func _physics_process(delta: float) -> void:
 			flashlight.visible = false
 			if game and game.has_method("set_prompt"):
 				game.set_prompt("FLASHLIGHT BATTERY EMPTY  //  BUY OR FIND A CELL")
-	bob_clock += delta * (10.0 if move_input.length() > 0.1 else 2.2)
-	if body_visual:
-		body_visual.position.y = 0.92 + (sin(bob_clock) * 0.025 if move_input.length() > 0.1 else 0.0)
-		if left_arm:
-			var stride := sin(bob_clock) * (0.44 if move_input.length() > 0.1 else 0.035)
-			left_arm.rotation.x = stride
-			right_arm.rotation.x = -stride
-		if left_leg and right_leg:
-			var leg_stride := sin(bob_clock) * (0.50 if move_input.length() > 0.1 else 0.02)
-			left_leg.rotation.x = -leg_stride
-			right_leg.rotation.x = leg_stride
-		if emote_time > 0.0:
-			emote_time = maxf(0.0, emote_time - delta)
-			match emote_name:
-				"dance":
-					body_visual.rotation.y = sin(Time.get_ticks_msec() * 0.012) * 0.28
-					left_arm.rotation.z = sin(Time.get_ticks_msec() * 0.015) * 0.9 - 0.45
-					right_arm.rotation.z = -sin(Time.get_ticks_msec() * 0.015) * 0.9 + 0.45
-				"wave":
-					body_visual.rotation.y = 0.0
-					right_arm.rotation.z = -1.25 + sin(Time.get_ticks_msec() * 0.025) * 0.38
-				"cheer":
-					body_visual.rotation.y = 0.0
-					left_arm.rotation.z = 1.0
-					right_arm.rotation.z = -1.0
-			if emote_time <= 0.0:
-				emote_name = ""
-				body_visual.rotation.y = 0.0
-				left_arm.rotation.z = 0.0
-				right_arm.rotation.z = 0.0
-				left_arm.rotation.x = 0.0
-				right_arm.rotation.x = 0.0
+	_animate_visuals(delta, move_input.length() > 0.1)
 	network_clock += delta
 	if network_clock >= 0.10:
 		network_clock = 0.0
@@ -295,9 +267,50 @@ func _physics_process(delta: float) -> void:
 		if game and game.has_method("toggle_inventory"):
 			game.toggle_inventory(player_id)
 
-func _process(_delta: float) -> void:
-	if is_multiplayer_authority() and game and game.has_method("set_local_player_status"):
-		game.set_local_player_status(health, stamina, flashlight_charge)
+func _process(delta: float) -> void:
+	if is_multiplayer_authority():
+		if game and game.has_method("set_local_player_status"):
+			game.set_local_player_status(health, stamina, flashlight_charge)
+	else:
+		var displacement := global_position.distance_to(last_remote_visual_position)
+		last_remote_visual_position = global_position
+		if displacement > 0.012:
+			remote_movement_hold = 0.22
+		else:
+			remote_movement_hold = maxf(0.0, remote_movement_hold - delta)
+		_animate_visuals(delta, remote_movement_hold > 0.0)
+
+func _animate_visuals(delta: float, moving: bool) -> void:
+	if not body_visual:
+		return
+	bob_clock += delta * (10.0 if moving else 2.2)
+	body_visual.position.y = 0.92 + (sin(bob_clock) * 0.025 if moving else 0.0)
+	var stride := sin(bob_clock) * (0.44 if moving else 0.035)
+	if left_arm and right_arm:
+		left_arm.rotation.x = stride
+		right_arm.rotation.x = -stride
+	if left_leg and right_leg:
+		left_leg.rotation.x = -stride * 1.15
+		right_leg.rotation.x = stride * 1.15
+	if emote_time > 0.0:
+		emote_time = maxf(0.0, emote_time - delta)
+		match emote_name:
+			"dance":
+				body_visual.rotation.y = sin(Time.get_ticks_msec() * 0.012) * 0.28
+				left_arm.rotation.z = sin(Time.get_ticks_msec() * 0.015) * 0.9 - 0.45
+				right_arm.rotation.z = -sin(Time.get_ticks_msec() * 0.015) * 0.9 + 0.45
+			"wave":
+				body_visual.rotation.y = 0.0
+				right_arm.rotation.z = -1.25 + sin(Time.get_ticks_msec() * 0.025) * 0.38
+			"cheer":
+				body_visual.rotation.y = 0.0
+				left_arm.rotation.z = 1.0
+				right_arm.rotation.z = -1.0
+		if emote_time <= 0.0:
+			emote_name = ""
+			body_visual.rotation.y = 0.0
+			left_arm.rotation.z = 0.0
+			right_arm.rotation.z = 0.0
 
 func _mobile_down(action: String) -> bool:
 	return bool(mobile_buttons.get(action, false))
