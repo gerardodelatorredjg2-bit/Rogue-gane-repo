@@ -11,7 +11,7 @@ Cooperative sci-fi salvage horror for Android and local Wi-Fi.
 - Procedurally assembled industrial environments with six selectable site themes.
 - Robot stalkers with patrol, pursuit and attack states; the Android workflow downloads four rigged low-poly CC0 robot models and keeps a procedural fallback.
 - Salvage pickups, extraction quota, team credits and round progression.
-- Modular drop-ship landing bay, industrial set dressing, hazard markings, service panels, fog and low-cost lighting.\n- HUD telemetry with suit/stamina bars, quota progress and a proximity warning sensor.\n- A lightweight procedural machine hum as a temporary ambience layer; final music is intentionally left for the project owner.
+- Modular drop-ship landing bay with an interactive service terminal for suit repairs and stamina refills, plus industrial set dressing, hazard markings, service panels, fog and low-cost lighting.\n- HUD telemetry with suit/stamina bars, quota progress and a proximity warning sensor.\n- A lightweight procedural machine hum as a temporary ambience layer; final music is intentionally left for the project owner.
 - GitHub Actions workflow for Android APK export.
 
 ## Build with Godot
