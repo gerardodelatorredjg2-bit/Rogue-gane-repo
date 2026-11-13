@@ -142,11 +142,49 @@ func sync_player_inventory(player_id: int, inventory: Dictionary) -> void:
 @rpc("authority", "call_local", "reliable")
 func sync_ship_upgrades(upgrades: Dictionary) -> void:
 	ship_upgrades = upgrades.duplicate(true)
+	_refresh_ship_upgrade_visuals()
 	for peer_id in players.keys():
 		var player := players[peer_id] as SalvagePlayer
 		if is_instance_valid(player):
 			player.move_speed_multiplier = 1.0 + float(ship_upgrades.get("engine", 0)) * 0.05
 			player.damage_resistance = minf(0.35, float(ship_upgrades.get("hull", 0)) * 0.06)
+
+
+func _refresh_ship_upgrade_visuals() -> void:
+	var generated_world := get_node_or_null("GeneratedWorld")
+	if not generated_world:
+		return
+	for old_node in generated_world.get_children():
+		if old_node.is_in_group("ship_upgrade_visual"):
+			old_node.queue_free()
+	var ship_pos: Vector3 = world_info.get("ship", Vector3(0, 0, 17))
+	var hull_level := mini(5, int(ship_upgrades.get("hull", 0)))
+	for level in range(hull_level):
+		for side in [-1.0, 1.0]:
+			_add_ship_upgrade_plate(generated_world, ship_pos + Vector3(side * 4.18, 1.48 + float(level) * 0.12, -1.35 + float(level) * 0.48), Vector3(0.20, 0.40, 1.55), Color(0.90, 0.38, 0.13))
+	var storage_level := mini(5, int(ship_upgrades.get("storage", 0)))
+	for level in range(storage_level):
+		_add_ship_upgrade_plate(generated_world, ship_pos + Vector3(0, 2.54 + float(level) * 0.18, 2.35), Vector3(4.2, 0.10, 0.18), Color(0.82, 0.62, 0.22))
+	var engine_level := mini(5, int(ship_upgrades.get("engine", 0)))
+	for level in range(engine_level):
+		for side in [-1.0, 1.0]:
+			_add_ship_upgrade_plate(generated_world, ship_pos + Vector3(side * 4.45, 1.05, 3.65 + float(level) * 0.13), Vector3(0.46, 0.24, 0.10), Color(0.18, 0.82, 1.0))
+
+func _add_ship_upgrade_plate(parent: Node, position: Vector3, size: Vector3, color: Color) -> void:
+	var plate := MeshInstance3D.new()
+	plate.add_to_group("ship_upgrade_visual")
+	var mesh := BoxMesh.new()
+	mesh.size = size
+	plate.mesh = mesh
+	var material := StandardMaterial3D.new()
+	material.albedo_color = color
+	material.metallic = 0.68
+	material.roughness = 0.32
+	material.emission_enabled = true
+	material.emission = color * 0.22
+	plate.material_override = material
+	plate.position = position
+	parent.add_child(plate)
 
 func _configure_input() -> void:
 	_add_key_action("move_forward", KEY_W)
@@ -395,6 +433,7 @@ func _start_session_world() -> void:
 	shift_seconds = 0.0
 	_clear_world()
 	world_info = WorldBuilderScript.new().build(self, current_map, session_seed)
+	_refresh_ship_upgrade_visuals()
 	if not has_node("IndustrialAmbience"):
 		var ambience = AmbienceScript.new()
 		ambience.name = "IndustrialAmbience"
@@ -885,7 +924,10 @@ func open_ship_terminal(player_id: int) -> void:
 	scroll.add_child(list)
 	for item_id in SHOP_CATALOG.keys():
 		var entry: Dictionary = SHOP_CATALOG[item_id]
-		var row_button := _button("%s  //  ¢%d" % [entry.get("label", item_id), int(entry.get("cost", 0))], str(entry.get("kind")) == "upgrade")
+		var display_cost := int(entry.get("cost", 0))
+		if str(entry.get("kind")) == "upgrade":
+			display_cost += int(ship_upgrades.get(str(item_id), 0)) * 50
+		var row_button := _button("%s  //  ¢%d" % [entry.get("label", item_id), display_cost], str(entry.get("kind")) == "upgrade")
 		row_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		var captured_item_id := str(item_id)
 		row_button.pressed.connect(func(): request_ship_purchase(captured_item_id, player_id))
@@ -919,6 +961,12 @@ func _server_ship_purchase(item_id: String, player_id: int) -> void:
 	var entry: Dictionary = SHOP_CATALOG[item_id]
 	var cost := int(entry.get("cost", -1))
 	var kind := str(entry.get("kind", ""))
+	if kind == "upgrade":
+		var current_level := int(ship_upgrades.get(item_id, 0))
+		if current_level >= 5:
+			_deny_shop_purchase(player_id, "SHIP UPGRADE MAXIMUM REACHED")
+			return
+		cost += current_level * 50
 	if cost < 0 or credits < cost:
 		_deny_shop_purchase(player_id, "NOT ENOUGH CREDITS")
 		return
