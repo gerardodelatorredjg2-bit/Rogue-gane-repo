@@ -1420,6 +1420,8 @@ func _open_settings() -> void:
 			mobile_ui.queue_free()
 			mobile_ui = null
 			_create_mobile_controls()
+		if is_instance_valid(settings_panel):
+			ui_root.move_child(settings_panel, ui_root.get_child_count() - 1)
 		set_prompt("SETTINGS SAVED  //  PROFILE UPDATED")
 		_play_sfx("ui")
 	)
