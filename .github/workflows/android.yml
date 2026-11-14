@@ -64,20 +64,26 @@ jobs:
         run: |
           set -o pipefail
           godot --headless --editor --path . --quit 2>&1 | tee /tmp/godot-import.log
-          if grep -E "SCRIPT ERROR:|ERROR: Failed to load script" /tmp/godot-import.log; then
+          if grep -E "SCRIPT ERROR:|ERROR:" /tmp/godot-import.log; then
             echo "Godot import reported script errors."
             exit 1
           fi
           godot --headless --path . --script tests/startup_smoke.gd 2>&1 | tee /tmp/godot-smoke.log
-          if grep -E "SCRIPT ERROR:|ERROR: Failed to load script|SMOKE TEST FAILED" /tmp/godot-smoke.log; then
+          if grep -E "SCRIPT ERROR:|ERROR:|SMOKE TEST FAILED" /tmp/godot-smoke.log; then
             echo "Godot startup smoke test failed."
             exit 1
           fi
 
       - name: Export debug APK
+        shell: bash
         run: |
+          set -o pipefail
           mkdir -p build
-          godot --headless --path . --export-debug "Android" build/RogueMachines.apk
+          godot --headless --path . --export-debug "Android" build/RogueMachines.apk 2>&1 | tee /tmp/godot-export.log
+          if grep -E "SCRIPT ERROR:|ERROR:" /tmp/godot-export.log; then
+            echo "Godot export reported engine or script errors."
+            exit 1
+          fi
           test -s build/RogueMachines.apk
           ls -lh build/RogueMachines.apk
 
