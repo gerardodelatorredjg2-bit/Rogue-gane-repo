@@ -116,7 +116,7 @@ func _build_robot() -> void:
 
 func _add_spike(parent: Node3D, pos: Vector3, side: float, mat: Material) -> void:
 	var spike := MeshInstance3D.new()
-	var mesh := ConeMesh.new()
+	var mesh := CylinderMesh.new()
 	mesh.bottom_radius = 0.12
 	mesh.top_radius = 0.0
 	mesh.height = 0.52
