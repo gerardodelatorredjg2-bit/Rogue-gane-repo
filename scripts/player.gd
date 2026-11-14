@@ -11,6 +11,7 @@ var mobile_buttons: Dictionary = {}
 var mobile_vector := Vector2.ZERO
 var look_sensitivity: float = 0.0022
 var network_clock: float = 0.0
+var server_network_time: float = 0.0
 var bob_clock: float = 0.0
 var is_dead: bool = false
 var flashlight_charge: float = 100.0
@@ -85,6 +86,7 @@ func sync_emote(value: String) -> void:
 
 func _ready() -> void:
 	add_to_group("players")
+	server_network_time = float(Time.get_ticks_msec()) / 1000.0
 	set_multiplayer_authority(player_id)
 	collision_layer = 1
 	collision_mask = 1
@@ -396,18 +398,28 @@ func _send_network_state() -> void:
 		rpc_id(1, "server_receive_transform", global_position, rotation.y, view_camera.rotation.x, stamina, flashlight_charge, flashlight.visible)
 
 @rpc("any_peer", "unreliable")
-func server_receive_transform(pos: Vector3, yaw: float, pitch: float, current_stamina: float, current_battery: float, lamp_on: bool) -> void:
+func server_receive_transform(pos: Vector3, yaw: float, pitch: float, current_stamina: float, _reported_battery: float, lamp_on: bool) -> void:
 	if not multiplayer.is_server():
 		return
 	if multiplayer.get_remote_sender_id() != player_id:
 		return
+	# Treat client transforms as input, not as authoritative positions. Allow
+	# the configured sprint/engine speed plus a small packet-jitter allowance.
+	var now_seconds := float(Time.get_ticks_msec()) / 1000.0
+	var elapsed := clampf(now_seconds - server_network_time, 0.01, 0.5)
+	var maximum_step := (8.0 * move_speed_multiplier) * elapsed + 0.9
+	if not pos.is_finite() or global_position.distance_to(pos) > maximum_step:
+		return
+	server_network_time = now_seconds
 	global_position = pos
 	rotation.y = yaw
-	view_camera.rotation.x = pitch
+	view_camera.rotation.x = clampf(pitch, -1.35, 1.35)
 	stamina = clampf(current_stamina, 0.0, 100.0)
-	flashlight_charge = clampf(current_battery, 0.0, 100.0)
+	# Battery charge is server-owned. Never accept a client-reported refill.
+	if lamp_on:
+		flashlight_charge = maxf(0.0, flashlight_charge - 2.0 * elapsed)
 	flashlight.visible = lamp_on and flashlight_charge > 0.0
-	rpc("client_receive_transform", pos, yaw, pitch, stamina, flashlight_charge, flashlight.visible)
+	rpc("client_receive_transform", global_position, rotation.y, view_camera.rotation.x, stamina, flashlight_charge, flashlight.visible)
 
 @rpc("any_peer", "call_remote", "unreliable")
 func client_receive_transform(pos: Vector3, yaw: float, pitch: float, current_stamina: float, current_battery: float, lamp_on: bool) -> void:
