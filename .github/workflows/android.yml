@@ -2,7 +2,7 @@ name: Android APK
 
 on:
   push:
-    branches: [main, feature/major-horror-overhaul, feature/gameplay-polish-settings-emotes]
+    branches: [main, feature/major-horror-overhaul, feature/gameplay-polish-settings-emotes, feature/quality-polish-ui]
   pull_request:
     branches: [main]
   workflow_dispatch:
