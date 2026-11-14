@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <defs>
+    <style>
+      .i{fill:none;stroke:#a5f4e4;stroke-width:4;stroke-linecap:round;stroke-linejoin:round}
+      .a{fill:none;stroke:#ff694f;stroke-width:3.5;stroke-linecap:round;stroke-linejoin:round}
+      .d{fill:#a5f4e4;stroke:none}
+    </style>
+  </defs>
+  <!-- Row 1: movement -->
+  <g class="i" transform="translate(0 0)">
+    <path d="M43 32H18m0 0 11-11M18 32l11 11"/>
+    <path d="M47 16v32" opacity=".25"/>
+  </g>
+  <g class="i" transform="translate(64 0)">
+    <path d="M21 32h25m0 0L35 21m11 11L35 43"/>
+    <path d="M17 16v32" opacity=".25"/>
+  </g>
+  <g class="i" transform="translate(128 0)">
+    <path d="M32 47V18m0 0L21 29m11-11 11 11"/>
+    <path d="M16 47h32" opacity=".25"/>
+  </g>
+  <g class="i" transform="translate(192 0)">
+    <path d="M32 17v29m0 0L21 35m11 11 11-11"/>
+    <path d="M16 17h32" opacity=".25"/>
+  </g>
+  <!-- Row 2: sprint, interact, lamp, inventory -->
+  <g transform="translate(0 64)">
+    <path class="i" d="M36 9 17 35h13l-4 20 22-29H35z"/>
+    <path class="a" d="m38 14-6 9"/>
+  </g>
+  <g class="i" transform="translate(64 64)">
+    <circle cx="32" cy="32" r="18"/>
+    <circle class="a" cx="32" cy="32" r="5"/>
+    <path d="M32 8v9M32 47v9M8 32h9M47 32h9"/>
+  </g>
+  <g class="i" transform="translate(128 64)">
+    <path d="M18 27h12l17-9v28l-17-9H18z"/>
+    <path d="m21 38 7 15h8l-6-15"/>
+    <path class="a" d="M51 20q8 12 0 24M56 14q13 18 0 36"/>
+  </g>
+  <g class="i" transform="translate(192 64)">
+    <path d="M20 22 25 13h14l5 9 5 5v25H15V27z"/>
+    <path d="M25 13v10h14V13M15 29h34M26 36h12v9H26z"/>
+    <path class="a" d="M29 40h6"/>
+  </g>
+  <!-- Row 3: jump, dance, wave, cheer -->
+  <g class="i" transform="translate(0 128)">
+    <circle cx="32" cy="13" r="5"/>
+    <path d="m29 20-7 13 10 5 8-10M30 25l-12-5M37 25l10-10M32 38l-9 14M32 38l13 11"/>
+    <path class="a" d="m48 8 2 5 5 2-5 2-2 5-2-5-5-2 5-2z"/>
+  </g>
+  <g class="i" transform="translate(64 128)">
+    <circle cx="32" cy="13" r="5"/>
+    <path d="m31 20-8 12 11 7 9-9M28 24 17 17M38 25l11-8M34 39l-12 12M34 39l15 10"/>
+    <path class="a" d="m15 8 2 4 4 2-4 2-2 4-2-4-4-2 4-2z"/>
+  </g>
+  <g class="i" transform="translate(128 128)">
+    <path d="M24 51V29l-5-7q-3-5 1-7 4-1 7 5l5 7V12q0-5 4-5t4 5v15l4-7q3-4 6-1 3 2 0 7l-7 13-2 12z"/>
+    <path class="a" d="M15 12q-5 5 0 10M50 8q6 5 2 11"/>
+  </g>
+  <g class="i" transform="translate(192 128)">
+    <path d="M18 27h28v6q0 15-14 15T18 33zM32 48v7M23 55h18M18 29H12q0 12 10 13M46 29h6q0 12-10 13"/>
+    <path class="a" d="m32 10 2 5 5 2-5 2-2 5-2-5-5-2 5-2z"/>
+  </g>
+  <!-- Row 4: settings, medkit, scanner, battery -->
+  <g class="i" transform="translate(0 192)">
+    <path d="M27 9h10l2 6 5 2 6-2 5 9-5 4v8l5 4-5 9-6-2-5 2-2 6H27l-2-6-5-2-6 2-5-9 5-4v-8l-5-4 5-9 6 2 5-2z" transform="translate(0 -1) scale(.92) translate(2.8 3)"/>
+    <circle cx="32" cy="32" r="8"/>
+    <circle class="a" cx="32" cy="32" r="3"/>
+  </g>
+  <g class="i" transform="translate(64 192)">
+    <rect x="12" y="17" width="40" height="32" rx="5"/>
+    <path d="M32 23v20M22 33h20"/>
+    <path class="a" d="M26 10h12"/>
+  </g>
+  <g class="i" transform="translate(128 192)">
+    <rect x="13" y="12" width="38" height="40" rx="5"/>
+    <circle cx="32" cy="31" r="10"/>
+    <path d="M32 21v20M22 31h20"/>
+    <path class="a" d="m42 13 5-5M47 18l6-2"/>
+  </g>
+  <g class="i" transform="translate(192 192)">
+    <rect x="15" y="18" width="34" height="30" rx="4"/>
+    <path d="M25 18v-5h14v5M22 33h20"/>
+    <path class="a" d="M32 24v8m-4-4h8"/>
+  </g>
+</svg>

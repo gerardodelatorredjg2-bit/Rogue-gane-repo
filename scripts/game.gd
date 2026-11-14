@@ -71,6 +71,14 @@ var player_display_name: String = "CREWMATE"
 var move_key_layout: int = 0
 var mobile_left_handed: bool = false
 var invert_look_y: bool = false
+var ui_icon_atlas: Texture2D
+var ui_icon_cache: Dictionary = {}
+const UI_ICON_CELLS := {
+	"move_left": 0, "move_right": 1, "move_up": 2, "move_down": 3,
+	"sprint": 4, "interact": 5, "flashlight": 6, "inventory": 7,
+	"jump": 8, "dance": 9, "wave": 10, "cheer": 11,
+	"settings": 12, "medkit": 13, "scanner": 14, "battery": 15
+}
 
 func _ready() -> void:
 	Engine.max_fps = 30 if OS.has_feature("mobile") else 60
@@ -790,10 +798,12 @@ func _create_hud() -> void:
 	bar.add_child(timer_label)
 	var bag_hud_button := _button("BAG", false)
 	bag_hud_button.custom_minimum_size = Vector2(54, 38)
+	_apply_ui_icon(bag_hud_button, "inventory", "Inventory")
 	bag_hud_button.pressed.connect(func(): toggle_inventory(multiplayer.get_unique_id()))
 	bar.add_child(bag_hud_button)
 	var settings_hud_button := _button("⚙", false)
 	settings_hud_button.custom_minimum_size = Vector2(48, 38)
+	_apply_ui_icon(settings_hud_button, "settings", "Settings")
 	settings_hud_button.pressed.connect(_open_settings)
 	bar.add_child(settings_hud_button)
 
@@ -1295,8 +1305,39 @@ func _create_mobile_controls() -> void:
 	if movement:
 		movement.tooltip_text = "Movement pad"
 
+func _ui_icon(icon_name: String) -> Texture2D:
+	if ui_icon_cache.has(icon_name):
+		return ui_icon_cache[icon_name] as Texture2D
+	if ui_icon_atlas == null:
+		ui_icon_atlas = load("res://assets/ui/controls_atlas.svg") as Texture2D
+	if ui_icon_atlas == null or not UI_ICON_CELLS.has(icon_name):
+		return null
+	var cell := int(UI_ICON_CELLS[icon_name])
+	var icon := AtlasTexture.new()
+	icon.atlas = ui_icon_atlas
+	icon.region = Rect2(Vector2((cell % 4) * 64, int(cell / 4) * 64), Vector2(64, 64))
+	ui_icon_cache[icon_name] = icon
+	return icon
+
+func _apply_ui_icon(button: Button, icon_name: String, accessible_label: String) -> void:
+	var texture := _ui_icon(icon_name)
+	if texture == null:
+		return
+	button.icon = texture
+	button.text = ""
+	button.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	button.expand_icon = true
+	button.tooltip_text = accessible_label
+
 func _touch_button(text_value: String, left: float, top: float, right: float, bottom: float, action: String, hold: bool = true) -> Button:
 	var button := _button(text_value, false)
+	var action_icons := {
+		"left": "move_left", "right": "move_right", "forward": "move_up", "back": "move_down",
+		"sprint": "sprint", "interact_once": "interact", "flashlight_once": "flashlight",
+		"inventory_once": "inventory", "jump": "jump"
+	}
+	if action_icons.has(action):
+		_apply_ui_icon(button, str(action_icons[action]), text_value.capitalize())
 	button.anchor_left = left
 	button.anchor_top = top
 	button.anchor_right = right
@@ -1326,6 +1367,7 @@ func _touch_button(text_value: String, left: float, top: float, right: float, bo
 
 func _emote_button(caption: String, left: float, top: float, emote: String) -> void:
 	var button := _button(caption, false)
+	_apply_ui_icon(button, emote, caption.capitalize())
 	button.anchor_left = left
 	button.anchor_top = top
 	button.anchor_right = left + 0.085
