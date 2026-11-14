@@ -26,17 +26,27 @@ func _run_startup_smoke() -> void:
 		quit(1)
 		return
 
-	app.call("_start_session_world")
+	for map_index in range(3):
+		app.set("current_map", map_index)
+		app.call("_start_session_world")
+		await process_frame
+		var generated_world := app.get_node_or_null("GeneratedWorld")
+		if generated_world == null:
+			push_error("SMOKE TEST FAILED: map %d did not create GeneratedWorld." % map_index)
+			quit(1)
+			return
+		var mesh_nodes: Array[Node] = generated_world.find_children("*", "MeshInstance3D", true, false)
+		if mesh_nodes.size() < 65:
+			push_error("SMOKE TEST FAILED: map %d is missing its environment geometry (%d meshes)." % [map_index, mesh_nodes.size()])
+			quit(1)
+			return
+		print("MAP SMOKE TEST PASSED: %s (%d 3D meshes)." % [WorldBuilder.MAP_NAMES[map_index], mesh_nodes.size()])
+
 	app.call("_spawn_player", 1, Vector3(0, 0, 17))
 	await process_frame
 	await process_frame
-
 	if not bool(app.get("session_live")):
 		push_error("SMOKE TEST FAILED: a solo session did not start.")
-		quit(1)
-		return
-	if app.get_node_or_null("GeneratedWorld") == null:
-		push_error("SMOKE TEST FAILED: GeneratedWorld was not created.")
 		quit(1)
 		return
 	if app.get_viewport().get_camera_3d() == null:
@@ -44,5 +54,5 @@ func _run_startup_smoke() -> void:
 		quit(1)
 		return
 
-	print("SMOKE TEST PASSED: menu, solo world, player and active camera are ready.")
+	print("SMOKE TEST PASSED: menu, all three maps, solo world, player and active camera are ready.")
 	quit(0)
