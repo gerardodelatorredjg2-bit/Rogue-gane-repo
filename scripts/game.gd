@@ -1095,7 +1095,7 @@ func open_inventory(player_id: int) -> void:
 		var item_name := _label("%s   x%d" % [ITEM_LABELS[item_id], count], 12, Color(0.78, 0.91, 0.92))
 		item_name.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_child(item_name)
-		var captured_item_id := item_id
+		var captured_item_id: String = str(item_id)
 		var use_button := _button("USE", true)
 		use_button.custom_minimum_size = Vector2(72, 38)
 		use_button.disabled = count <= 0
@@ -1177,7 +1177,7 @@ func sync_inventory_use(player_id: int, item_id: String, new_health: float, new_
 	if player_id == multiplayer.get_unique_id():
 		_refresh_inventory_panel()
 	_play_sfx("pickup")
-	var item_label := ITEM_LABELS.get(item_id, item_id.to_upper())
+	var item_label: String = str(ITEM_LABELS.get(item_id, item_id.to_upper()))
 	set_prompt("ITEM USED  //  " + item_label)
 
 func request_drop_inventory_item(item_id: String, player_id: int) -> void:
