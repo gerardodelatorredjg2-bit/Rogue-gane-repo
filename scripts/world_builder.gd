@@ -556,7 +556,7 @@ func _build_hazard_details(map_index: int) -> void:
 			var x: float = -20.0 + float(i) * 5.0
 			_make_box("RelayCableLight", Vector3(x, 0.02, 8.8), Vector3(1.8, 0.03, 0.09), stripe_mat, false)
 			_make_box("CeilingCableBracket", Vector3(x, 4.7, -1.0), Vector3(0.22, 0.22, 1.4), pipe_mat, false)
-		_make_box("RelayCeilingStrip", Vector3(x, 4.72, -14.0), Vector3(2.8, 0.07, 0.12), stripe_mat, false)
+			_make_box("RelayCeilingStrip", Vector3(x, 4.72, -14.0), Vector3(2.8, 0.07, 0.12), stripe_mat, false)
 	else:
 		for i in range(8):
 			var x: float = -21.0 + float(i) * 6.0
