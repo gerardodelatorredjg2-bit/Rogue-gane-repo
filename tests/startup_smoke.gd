@@ -26,6 +26,25 @@ func _run_startup_smoke() -> void:
 		quit(1)
 		return
 
+	app.call("_create_mobile_controls")
+	var mobile_ui := app.get("mobile_ui") as Control
+	if mobile_ui == null:
+		push_error("SMOKE TEST FAILED: mobile controls container was not created.")
+		quit(1)
+		return
+	var mobile_buttons: Array[Node] = mobile_ui.find_children("*", "Button", true, false)
+	if mobile_buttons.size() < 12:
+		push_error("SMOKE TEST FAILED: expected 12 mobile action/emote buttons, found %d." % mobile_buttons.size())
+		quit(1)
+		return
+	for node in mobile_buttons:
+		var button := node as Button
+		if button == null or button.icon == null:
+			push_error("SMOKE TEST FAILED: mobile control '%s' has no custom icon." % node.name)
+			quit(1)
+			return
+	print("UI ICON SMOKE TEST PASSED: all %d mobile controls have icons." % mobile_buttons.size())
+
 	for map_index in range(3):
 		app.set("current_map", map_index)
 		app.call("_start_session_world")
@@ -54,5 +73,5 @@ func _run_startup_smoke() -> void:
 		quit(1)
 		return
 
-	print("SMOKE TEST PASSED: menu, all three maps, solo world, player and active camera are ready.")
+	print("SMOKE TEST PASSED: menu, mobile controls, all three maps, solo world, player and active camera are ready.")
 	quit(0)
