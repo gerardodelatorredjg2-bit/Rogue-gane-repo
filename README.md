@@ -2,13 +2,13 @@
 
 Cooperative sci-fi salvage horror for Android and local Wi-Fi.
 
-> Current milestone: expanded playable foundation with a modular drop-ship, industrial horror pass, telemetry HUD and an automated CC0 robot-model import. Built with Godot 4.7, GDScript and the Compatibility renderer for low-end Android devices.
+> Current milestone: three distinct industrial-horror maps, a modular drop-ship, telemetry HUD, red-eyed robot branding and automated CC0 environment/robot asset imports. Built with Godot 4.7, GDScript and the Compatibility renderer for low-end Android devices.
 
 ## What is in this repository
 
 - First-person 3D exploration with desktop and touch controls.
 - ENet multiplayer: one phone hosts a Wi-Fi/LAN session; other phones join using the host's local IPv4 address.
-- Procedurally assembled industrial environments with six selectable site themes.
+- Three bespoke industrial sci-fi environments in the current milestone: The Dead Foundry, Lunar Relay and Blacksite 09. Additional locations are deferred until these three are complete.
 - Robot stalkers with patrol, line-of-sight pursuit, search memory, attack lunge, horror overlays and positional audio; the Android workflow downloads four rigged CC0 robot models plus Kenney props.
 - Salvage pickups, extraction quota, team credits and escalating contracts (quota +1 each shift, extra stalkers on later shifts).
 - Personal inventory with medkits, flashlight cells and motion scanner; items can be used, dropped with rigid-body physics and picked up again.
@@ -17,7 +17,7 @@ Cooperative sci-fi salvage horror for Android and local Wi-Fi.
 - HUD telemetry with suit/stamina bars, quota progress, proximity warning sensor and a quick-access settings panel.
 - Persistent player profile name, master/music volume sliders, graphics render-scale/FPS presets, look sensitivity, WASD/arrow-key selection, inverted vertical look and left-handed mobile controls.
 - Three synchronized crew emotes (dance, wave and cheer) on the mobile HUD; basic articulated suit walk cycles and nameplates display across LAN.
-- The Android build fetches Kenney Space Kit CC0 modular props, Poly Haven 1K CC0 rusty-metal PBR diffuse/roughness maps and Kenney CC0 sci-fi OGG effects.
+- The Android build fetches modular Kenney Space Kit and Space Station Kit CC0 props, Poly Haven 1K CC0 rusty-metal PBR diffuse/roughness maps and Kenney CC0 sci-fi OGG effects.
 - Stalker escalation: later contracts increase enemy movement speed and detection range, with a short attack lunge.
 - A lightweight procedural machine hum as a temporary ambience layer; final music is intentionally left for the project owner.
 - GitHub Actions workflow for Android APK export.
