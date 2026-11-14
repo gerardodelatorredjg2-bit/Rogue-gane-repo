@@ -136,7 +136,7 @@ func _build_foundry_layout() -> void:
 	_room_shell("CastingBay_West", Vector3(-15, 0, -12), 13, 14, 4.7, wall_mat)
 	_room_shell("CastingBay_East", Vector3(15, 0, -12), 13, 14, 4.7, wall_mat)
 	for side in [-1.0, 1.0]:
-		var x := side * 15.0
+		var x: float = side * 15.0
 		_make_box("FurnaceHousing", Vector3(x, 1.65, -13.2), Vector3(5.2, 3.3, 4.4), steel)
 		_make_box("FurnaceMouth", Vector3(x, 1.50, -10.95), Vector3(3.5, 1.65, 0.12), hot, false)
 		_make_box("FurnaceUpperTrim", Vector3(x, 3.42, -13.2), Vector3(5.5, 0.22, 4.65), hazard, false)
@@ -154,7 +154,7 @@ func _build_foundry_layout() -> void:
 	_make_box("GantryCrossbeam", Vector3(0, 5.0, -5.0), Vector3(42, 0.42, 0.65), steel)
 	_make_box("GantryWarningRail", Vector3(0, 4.68, -5.0), Vector3(40, 0.10, 0.10), hazard, false)
 	for side in [-1.0, 1.0]:
-		var catwalk_x := side * 20.2
+		var catwalk_x: float = side * 20.2
 		_make_box("FoundryCatwalk", Vector3(catwalk_x, 2.35, -5.0), Vector3(2.0, 0.18, 23.0), steel)
 		_make_box("CatwalkRail", Vector3(catwalk_x + side * 0.9, 3.0, -5.0), Vector3(0.12, 1.25, 23.0), hazard, false)
 		_make_box("CatwalkBrace", Vector3(catwalk_x, 1.2, -5.0), Vector3(0.18, 2.2, 18.0), steel)
@@ -236,7 +236,7 @@ func _build_blacksite_layout() -> void:
 		_add_containment_tank(Vector3(0, 0, z), glass, red)
 	_add_containment_tank(Vector3(-16, 0, -14), glass, red)
 	_add_containment_tank(Vector3(16, 0, -14), glass, red)
-	_add_console_bank(Vector3(-4.5, 0.75, -5.0), 3, red)
+	_add_console_bank(Vector3(-4.5, 0.75, -5.0), 3, Color(1.0, 0.04, 0.06))
 	_add_console_bank(Vector3(4.5, 0.75, -5.0), 3, accent)
 	_make_box("AutopsyTable", Vector3(0, 0.85, 2.0), Vector3(5.0, 0.28, 1.8), black_panel)
 	_make_box("AutopsyScreen", Vector3(0, 2.0, -1.7), Vector3(4.8, 1.25, 0.12), red, false)
@@ -415,6 +415,25 @@ func _add_station_model(model_name: String, position: Vector3, scale_value: floa
 	instance.scale = Vector3.ONE * scale_value
 	root.add_child(instance)
 
+func _add_kenney_model(model_name: String, position: Vector3, scale_value: float, yaw: float) -> void:
+	var path := "res://assets/models/kenney/%s.glb" % model_name
+	if not ResourceLoader.exists(path):
+		return
+	var packed: PackedScene = kenney_cache.get(model_name) as PackedScene
+	if packed == null:
+		packed = load(path) as PackedScene
+		if packed == null:
+			return
+		kenney_cache[model_name] = packed
+	var instance := packed.instantiate() as Node3D
+	if instance == null:
+		return
+	instance.name = "Kenney_" + model_name
+	instance.position = position
+	instance.rotation.y = yaw
+	instance.scale = Vector3.ONE * scale_value
+	root.add_child(instance)
+
 func _build_lights(map_index: int) -> void:
 	var points: Array[Vector3] = []
 	match map_index:
@@ -534,13 +553,13 @@ func _build_hazard_details(map_index: int) -> void:
 			_make_box("FoundryFloorGrate", Vector3(-18.0 + float(i) * 6.0, 0.014, 12.0), Vector3(2.8, 0.024, 0.34), pipe_mat, false)
 	elif map_index == 1:
 		for i in range(9):
-			var x := -20.0 + float(i) * 5.0
+			var x: float = -20.0 + float(i) * 5.0
 			_make_box("RelayCableLight", Vector3(x, 0.02, 8.8), Vector3(1.8, 0.03, 0.09), stripe_mat, false)
 			_make_box("CeilingCableBracket", Vector3(x, 4.7, -1.0), Vector3(0.22, 0.22, 1.4), pipe_mat, false)
 		_make_box("RelayCeilingStrip", Vector3(x, 4.72, -14.0), Vector3(2.8, 0.07, 0.12), stripe_mat, false)
 	else:
 		for i in range(8):
-			var x := -21.0 + float(i) * 6.0
+			var x: float = -21.0 + float(i) * 6.0
 			_make_box("BlacksiteContainmentMark", Vector3(x, 0.02, 8.5), Vector3(1.7, 0.03, 0.12), stripe_mat, false)
 			_make_box("BiohazardCeilingRail", Vector3(x, 4.7, -10.0), Vector3(0.18, 0.20, 4.0), pipe_mat, false)
 		for side in [-1.0, 1.0]:
