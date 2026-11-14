@@ -60,6 +60,24 @@ Maps: diffuse and roughness (1K JPEG).
 License: CC0 1.0 Universal.
 LICENSE
 
+# Kenney Space Station Kit CC0 models (pinned public GLB mirror).
+# Official pack page: https://kenney.nl/assets/space-station-kit
+STATION_DIR="assets/models/kenney_station"
+STATION_BASE="https://raw.githubusercontent.com/jonathaneeckhout/godot-fps-multiplayer/7bf5c62a9bc301e4f82e2c2ec51f3125f00d6e47/assets/models/map/kenny_space-station-kit"
+mkdir -p "$STATION_DIR"
+for model in wall wall-window wall-door wall-pillar wall-detail wall-switch wall-banner floor floor-detail floor-panel floor-panel-straight structure structure-panel structure-barrier structure-barrier-high table table-large table-display computer computer-screen computer-system computer-wide container container-flat container-tall chair bed-single pipe pipe-bend pipe-ring; do
+  echo "Fetching Kenney Space Station Kit: ${model}.glb"
+  curl --fail --location --silent --show-error --retry 3 \
+    "$STATION_BASE/${model}.glb" --output "$STATION_DIR/${model}.glb"
+  test -s "$STATION_DIR/${model}.glb"
+done
+cat > "$STATION_DIR/LICENSE-CC0.txt" <<'LICENSE'
+Kenney Space Station Kit
+Official source: https://kenney.nl/assets/space-station-kit
+License: Creative Commons Zero 1.0 Universal (CC0).
+The GLB files are fetched from a pinned mirror commit for reproducible Android builds.
+LICENSE
+
 # Kenney Sci-Fi Sounds: unpack the OGG effects and preserve the ZIP license.
 AUDIO_DIR="assets/audio/kenney_sci_fi"
 AUDIO_ZIP="${TMPDIR:-/tmp}/kenney_sci-fi-sounds.zip"
