@@ -489,7 +489,7 @@ func _build_ship(pos: Vector3) -> void:
 	_make_box("ShipCockpitGlass", pos + Vector3(0, 1.55, -3.38), Vector3(3.4, 1.0, 0.12), glass, false)
 	_make_box("ShipRamp", pos + Vector3(0, 0.02, -4.15), Vector3(5.6, 0.18, 1.8), edge, false)
 	for side in [-1.0, 1.0]:
-		var engine_pos := pos + Vector3(side * 4.45, 1.05, 2.35)
+		var engine_pos: Vector3 = pos + Vector3(side * 4.45, 1.05, 2.35)
 		_make_box("ShipEnginePod", engine_pos, Vector3(0.85, 1.35, 2.4), hull, false)
 		_make_box("ShipEngineGlow", engine_pos + Vector3(0, 0, 1.22), Vector3(0.48, 0.78, 0.12), glass, false)
 		_make_box("ShipBench", pos + Vector3(side * 2.7, 0.72, 0.7), Vector3(1.4, 0.85, 2.1), hull, false)
