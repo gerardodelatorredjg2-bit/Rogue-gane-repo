@@ -26,6 +26,14 @@ The downloaded CC0 license is stored as `assets/models/robots/LICENSE-CC0.txt`. 
 - Integration: `scripts/fetch_assets.sh` fetches the GLBs into `assets/models/kenney/`; `scripts/world_builder.gd` places a curated subset as industrial props on the six maps.
 - The download helper stores a project-side CC0 license note in `assets/models/kenney/LICENSE-CC0.txt`.
 
+### Kenney Space Station Kit
+- Creator / official pack: Kenney.
+- Official pack: https://kenney.nl/assets/space-station-kit
+- Imported modular GLBs: walls, doors, windows, floor panels, barriers, consoles, computers, containers, furniture and pipes.
+- License: CC0 1.0 Universal, as stated on Kenney's official asset page.
+- Integration: `scripts/fetch_assets.sh` downloads a pinned set of GLBs plus the shared `Textures/colormap.png` atlas into `assets/models/kenney_station/`; `scripts/world_builder.gd` assembles them into The Dead Foundry, Lunar Relay and Blacksite 09.
+- The pinned mirror is used only as a reproducible raw-file source; the official asset page is the license/source of record.
+
 ### Poly Haven Rusty Painted Metal
 - Creator: Amal Kumar.
 - Source: https://polyhaven.com/a/rusty_painted_metal
