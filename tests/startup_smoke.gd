@@ -74,4 +74,5 @@ func _run_startup_smoke() -> void:
 		return
 
 	print("SMOKE TEST PASSED: menu, mobile controls, all three maps, solo world, player and active camera are ready.")
+	app.free()
 	quit(0)
