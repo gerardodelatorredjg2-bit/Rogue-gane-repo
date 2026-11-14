@@ -267,9 +267,9 @@ func _show_lobby(message: String = "ALL SYSTEMS NOMINAL  //  LOCAL NETWORK READY
 	panel.anchor_right = 0.5
 	panel.anchor_bottom = 0.5
 	panel.offset_left = -270
-	panel.offset_top = -310
+	panel.offset_top = -330
 	panel.offset_right = 270
-	panel.offset_bottom = 310
+	panel.offset_bottom = 330
 	panel.add_theme_stylebox_override("panel", _panel_style(Color(0.025, 0.055, 0.07, 0.97), Color(0.08, 0.74, 0.70, 0.9)))
 	ui_root.add_child(panel)
 	var outer := MarginContainer.new()
@@ -281,9 +281,13 @@ func _show_lobby(message: String = "ALL SYSTEMS NOMINAL  //  LOCAL NETWORK READY
 	var stack := VBoxContainer.new()
 	stack.add_theme_constant_override("separation", 13)
 	outer.add_child(stack)
-	var eyebrow := _label("FIELD OPERATIONS DIVISION  /  09.27", 12, Color(0.22, 0.88, 0.78))
-	eyebrow.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	stack.add_child(eyebrow)
+	var logo := TextureRect.new()
+	logo.texture = load("res://icon.svg") as Texture2D
+	logo.custom_minimum_size = Vector2(76, 76)
+	logo.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	logo.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	logo.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	stack.add_child(logo)
 	var title := _label("ROGUE MACHINES", 34, Color(0.88, 0.96, 0.96))
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	stack.add_child(title)
