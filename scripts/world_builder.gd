@@ -192,7 +192,7 @@ func _build_lunar_relay_layout() -> void:
 		_make_box("RelayServerGlass", Vector3(-7.5, 1.75, z - 0.55), Vector3(0.82, 1.75, 0.04), glass, false)
 		_make_box("RelayServerRack", Vector3(7.5, 1.55, z), Vector3(1.25, 3.1, 1.05), panel)
 		_make_box("RelayServerGlass", Vector3(7.5, 1.75, z - 0.55), Vector3(0.82, 1.75, 0.04), glass, false)
-		_make_box("ServerStatus", Vector3(-7.5, 2.1, z - 0.59), Vector3(0.48, 0.06, 0.04), accent and panel, false)
+		_make_box("ServerStatus", Vector3(-7.5, 2.1, z - 0.59), Vector3(0.48, 0.06, 0.04), _mat(accent, 0.1, 0.25, true), false)
 	_make_cylinder(Vector3(0, 0.95, -22.2), 0.72, 1.9, panel)
 	_make_cylinder(Vector3(0, 3.1, -22.2), 0.18, 2.5, _mat(Color(0.42, 0.55, 0.62), 0.88, 0.25))
 	var dish := MeshInstance3D.new()
@@ -268,7 +268,7 @@ func _add_console_bank(center: Vector3, count: int, tint: Color) -> void:
 		_make_box("ConsoleScreen", Vector3(x, center.y + 1.47, center.z - 0.375), Vector3(0.94, 0.62, 0.025), screen_mat, false)
 		_make_box("ConsoleKeypad", Vector3(x, center.y + 1.18, center.z - 0.53), Vector3(0.85, 0.06, 0.30), screen_mat, false)
 
-func _add_containment_tank(position: Vector3, glass: Material, core: Material) -> void:
+func _add_containment_tank(position: Vector3, glass: Material, core: StandardMaterial3D) -> void:
 	var tank := MeshInstance3D.new()
 	var cylinder := CylinderMesh.new()
 	cylinder.top_radius = 0.78
