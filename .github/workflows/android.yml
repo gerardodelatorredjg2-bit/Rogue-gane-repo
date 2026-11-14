@@ -60,8 +60,19 @@ jobs:
         run: bash scripts/fetch_assets.sh
 
       - name: Import project and validate scripts
+        shell: bash
         run: |
-          godot --headless --editor --path . --quit
+          set -o pipefail
+          godot --headless --editor --path . --quit 2>&1 | tee /tmp/godot-import.log
+          if grep -E "SCRIPT ERROR:|ERROR: Failed to load script" /tmp/godot-import.log; then
+            echo "Godot import reported script errors."
+            exit 1
+          fi
+          godot --headless --path . --script tests/startup_smoke.gd 2>&1 | tee /tmp/godot-smoke.log
+          if grep -E "SCRIPT ERROR:|ERROR: Failed to load script|SMOKE TEST FAILED" /tmp/godot-smoke.log; then
+            echo "Godot startup smoke test failed."
+            exit 1
+          fi
 
       - name: Export debug APK
         run: |
