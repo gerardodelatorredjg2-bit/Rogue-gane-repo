@@ -67,7 +67,8 @@ STATION_BASE="https://raw.githubusercontent.com/jonathaneeckhout/godot-fps-multi
 mkdir -p "$STATION_DIR"
 mkdir -p "$STATION_DIR/Textures"
 curl --fail --location --silent --show-error --retry 3 \
-  "$STATION_BASE/../Textures/colormap.png" --output "$STATION_DIR/Textures/colormap.png"
+  "https://raw.githubusercontent.com/jonathaneeckhout/godot-fps-multiplayer/7bf5c62a9bc301e4f82e2c2ec51f3125f00d6e47/assets/models/map/kenny_space-station-kit/Textures/colormap.png" \
+  --output "$STATION_DIR/Textures/colormap.png"
 test -s "$STATION_DIR/Textures/colormap.png"
 for model in wall wall-window wall-door wall-pillar wall-detail wall-switch wall-banner floor floor-detail floor-panel floor-panel-straight structure structure-panel structure-barrier structure-barrier-high table table-large table-display computer computer-screen computer-system computer-wide container container-flat container-tall chair bed-single pipe pipe-bend pipe-ring; do
   echo "Fetching Kenney Space Station Kit: ${model}.glb"
