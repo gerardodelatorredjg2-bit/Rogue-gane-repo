@@ -2,6 +2,8 @@ config_version=5
 
 [application]
 config/name="ROGUE MACHINES: LOST SIGNAL"
+config/icon="res://icon.svg"
+config/version="0.3.0"
 config/description="Cooperative LAN salvage horror. Recover the signal. Bring the crew home."
 run/main_scene="res://scenes/main.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
@@ -13,6 +15,9 @@ window/size/window_width_override=1280
 window/size/window_height_override=720
 window/stretch/mode="canvas_items"
 window/handheld/orientation=1
+
+[audio]
+default_bus_layout="res://default_bus_layout.tres"
 
 [rendering]
 textures/vram_compression/import_etc2_astc=true

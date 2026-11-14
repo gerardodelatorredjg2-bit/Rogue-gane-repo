@@ -2,13 +2,13 @@ name: Android APK
 
 on:
   push:
-    branches: [main, feature/major-horror-overhaul]
+    branches: [main, feature/major-horror-overhaul, feature/gameplay-polish-settings-emotes]
   pull_request:
     branches: [main]
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: android-apk-${{ github.ref }}
@@ -60,13 +60,30 @@ jobs:
         run: bash scripts/fetch_assets.sh
 
       - name: Import project and validate scripts
+        shell: bash
         run: |
-          godot --headless --editor --path . --quit
+          set -o pipefail
+          godot --headless --editor --path . --quit 2>&1 | tee /tmp/godot-import.log
+          if grep -E "SCRIPT ERROR:|ERROR:" /tmp/godot-import.log; then
+            echo "Godot import reported script errors."
+            exit 1
+          fi
+          godot --headless --path . --script tests/startup_smoke.gd 2>&1 | tee /tmp/godot-smoke.log
+          if grep -E "SCRIPT ERROR:|ERROR:|SMOKE TEST FAILED" /tmp/godot-smoke.log; then
+            echo "Godot startup smoke test failed."
+            exit 1
+          fi
 
       - name: Export debug APK
+        shell: bash
         run: |
+          set -o pipefail
           mkdir -p build
-          godot --headless --path . --export-debug "Android" build/RogueMachines.apk
+          godot --headless --path . --export-debug "Android" build/RogueMachines.apk 2>&1 | tee /tmp/godot-export.log
+          if grep -E "SCRIPT ERROR:|ERROR:" /tmp/godot-export.log; then
+            echo "Godot export reported engine or script errors."
+            exit 1
+          fi
           test -s build/RogueMachines.apk
           ls -lh build/RogueMachines.apk
 
@@ -77,3 +94,19 @@ jobs:
           path: build/RogueMachines.apk
           if-no-files-found: error
           retention-days: 30
+
+      - name: Publish public Android APK release
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: android-latest
+          name: Latest Android APK
+          body: |
+            Automated debug build of ROGUE MACHINES: LOST SIGNAL.
+            Install on a compatible Android device. LAN multiplayer requires the same Wi-Fi network or hotspot.
+          files: build/RogueMachines.apk
+          fail_on_unmatched_files: true
+          overwrite_files: true
+          make_latest: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

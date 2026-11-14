@@ -2,16 +2,24 @@
 
 Cooperative sci-fi salvage horror for Android and local Wi-Fi.
 
-> Current milestone: expanded playable foundation with a modular drop-ship, industrial horror pass, telemetry HUD and an automated CC0 robot-model import. Built with Godot 4.7, GDScript and the Compatibility renderer for low-end Android devices.
+> Current milestone: three distinct industrial-horror maps, a modular drop-ship, telemetry HUD, red-eyed robot branding and automated CC0 environment/robot asset imports. Built with Godot 4.7, GDScript and the Compatibility renderer for low-end Android devices.
 
 ## What is in this repository
 
 - First-person 3D exploration with desktop and touch controls.
 - ENet multiplayer: one phone hosts a Wi-Fi/LAN session; other phones join using the host's local IPv4 address.
-- Procedurally assembled industrial environments with six selectable site themes.
-- Robot stalkers with patrol, pursuit and attack states; the Android workflow downloads four rigged low-poly CC0 robot models and keeps a procedural fallback.
-- Salvage pickups, extraction quota, team credits and round progression.
-- Modular drop-ship landing bay with an interactive service terminal for suit repairs and stamina refills, plus industrial set dressing, hazard markings, service panels, fog and low-cost lighting.\n- HUD telemetry with suit/stamina bars, quota progress and a proximity warning sensor.\n- A lightweight procedural machine hum as a temporary ambience layer; final music is intentionally left for the project owner.
+- Three bespoke industrial sci-fi environments in the current milestone: The Dead Foundry, Lunar Relay and Blacksite 09. Additional locations are deferred until these three are complete.
+- Robot stalkers with patrol, line-of-sight pursuit, search memory, attack lunge, horror overlays and positional audio; the Android workflow downloads four rigged CC0 robot models plus Kenney props.
+- Salvage pickups, extraction quota, team credits and escalating contracts (quota +1 each shift, extra stalkers on later shifts).
+- Personal inventory with medkits, flashlight cells and motion scanner; items can be used, dropped with rigid-body physics and picked up again.
+- Expanded ship quartermaster: suit repair, stamina, medkits, batteries, scanner, hull reinforcement, cargo racks and engine tuning. Team upgrades affect damage resistance, inventory capacity, movement speed and visible ship modules.
+- Modular drop-ship landing bay with interactive quartermaster, service terminal, hazard markings, service panels, fog and low-cost lighting; visible armor, cargo-rack and engine modules change as the crew buys upgrades.
+- HUD telemetry with suit/stamina bars, quota progress, proximity warning sensor and a quick-access settings panel.
+- Persistent player profile name, master/music volume sliders, graphics render-scale/FPS presets, look sensitivity, WASD/arrow-key selection, inverted vertical look and left-handed mobile controls.
+- Three synchronized crew emotes (dance, wave and cheer) on the mobile HUD; basic articulated suit walk cycles and nameplates display across LAN.
+- The Android build fetches modular Kenney Space Kit and Space Station Kit CC0 props, Poly Haven 1K CC0 rusty-metal PBR diffuse/roughness maps and Kenney CC0 sci-fi OGG effects.
+- Stalker escalation: later contracts increase enemy movement speed and detection range, with a short attack lunge.
+- A lightweight procedural machine hum as a temporary ambience layer; final music is intentionally left for the project owner.
 - GitHub Actions workflow for Android APK export.
 
 ## Build with Godot
@@ -42,11 +50,11 @@ LAN support depends on the Android device and hotspot allowing peer-to-peer traf
 
 ## Current scope and honest status
 
-This is an actively developed game project, not a claim of a finished commercial release. The initial repository milestone focuses on the gameplay loop and LAN foundation. Enemy navigation, mobile-device compatibility, networking under real Wi-Fi conditions, and the APK must still be tested on physical devices before calling the build production-ready.
+This is an actively developed game project, not a claim of a finished commercial release. The current milestone focuses on the gameplay loop, LAN foundation and a first player-customization/settings pass. Enemy navigation, mobile-device compatibility, networking under real Wi-Fi conditions, and the APK must still be tested on physical devices before calling the build production-ready.
 
 ## Asset policy
 
-The industrial environment and drop-ship are original procedural geometry. The Android build pipeline fetches four rigged low-poly robot GLBs from Gobkit's CC0 1.0 collection using `scripts/fetch_assets.sh`; the downloaded license is kept beside the models. Additional Kenney, Quaternius, Poly Pizza and Sketchfab assets may be added only after checking each model's license and attribution terms.
+The industrial environment and drop-ship combine original procedural geometry with licensed assets. `scripts/fetch_assets.sh` downloads Gobkit robot GLBs, Kenney Space Kit props and sci-fi sounds (CC0), plus Poly Haven's Rusty Painted Metal 1K PBR maps (CC0). Exact sources and license notes are listed in `docs/ASSETS_AND_ATTRIBUTION.md`.
 
 ## License
 

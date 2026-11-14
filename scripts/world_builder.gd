@@ -6,56 +6,50 @@ const LootScript = preload("res://scripts/loot.gd")
 const MAP_NAMES := [
 	"01  //  THE DEAD FOUNDRY",
 	"02  //  LUNAR RELAY",
-	"03  //  BLACKSITE 09",
-	"04  //  THE SUNKEN LINE",
-	"05  //  DRIFTING HULL",
-	"06  //  REACTOR WASTE"
+	"03  //  BLACKSITE 09"
 ]
 const ACCENTS := [
-	Color(0.16, 0.91, 0.78),
-	Color(0.36, 0.68, 1.0),
-	Color(0.82, 0.39, 0.96),
-	Color(0.96, 0.56, 0.26),
-	Color(0.34, 0.92, 0.96),
-	Color(1.0, 0.33, 0.22)
+	Color(1.0, 0.34, 0.12),
+	Color(0.22, 0.72, 1.0),
+	Color(0.95, 0.12, 0.24)
 ]
 const FLOOR_COLORS := [
-	Color(0.095, 0.13, 0.15), Color(0.085, 0.12, 0.17),
-	Color(0.12, 0.095, 0.15), Color(0.12, 0.105, 0.09),
-	Color(0.075, 0.12, 0.14), Color(0.13, 0.085, 0.075)
+	Color(0.12, 0.105, 0.095),
+	Color(0.065, 0.105, 0.16),
+	Color(0.105, 0.075, 0.095)
 ]
 
 var root: Node3D
 var rng := RandomNumberGenerator.new()
 var accent: Color
 var dark: Color
+var kenney_cache: Dictionary = {}
+var station_cache: Dictionary = {}
 
 func build(parent: Node, map_index: int, seed: int) -> Dictionary:
+	var selected_map := clampi(map_index, 0, MAP_NAMES.size() - 1)
 	rng.seed = seed
-	accent = ACCENTS[map_index % ACCENTS.size()]
-	dark = FLOOR_COLORS[map_index % FLOOR_COLORS.size()]
+	accent = ACCENTS[selected_map]
+	dark = FLOOR_COLORS[selected_map]
 	root = Node3D.new()
 	root.name = "GeneratedWorld"
 	parent.add_child(root)
-	_add_environment(map_index)
-	_make_box("MainFloor", Vector3(0, -0.55, 0), Vector3(48, 1.0, 48), _mat(dark, 0.78, 0.9))
-	_make_box("NorthBulkhead", Vector3(0, 2.2, -24), Vector3(48, 5.5, 0.8), _mat(Color(0.14, 0.18, 0.2), 0.65, 0.5))
-	_make_box("SouthBulkhead", Vector3(0, 2.2, 24), Vector3(48, 5.5, 0.8), _mat(Color(0.14, 0.18, 0.2), 0.65, 0.5))
-	_make_box("WestBulkhead", Vector3(-24, 2.2, 0), Vector3(0.8, 5.5, 48), _mat(Color(0.14, 0.18, 0.2), 0.65, 0.5))
-	_make_box("EastBulkhead", Vector3(24, 2.2, 0), Vector3(0.8, 5.5, 48), _mat(Color(0.14, 0.18, 0.2), 0.65, 0.5))
-	_build_corridors()
-	_build_props(map_index)
-	_build_lights()
+	_add_environment(selected_map)
+	_make_box("MainFloor", Vector3(0, -0.55, 0), Vector3(52, 1.0, 52), _mat(dark, 0.78, 0.9))
+	var industrial_wall := _industrial_material()
+	_make_box("NorthBulkhead", Vector3(0, 2.35, -26), Vector3(52, 5.8, 0.8), industrial_wall)
+	_make_box("SouthBulkhead", Vector3(0, 2.35, 26), Vector3(52, 5.8, 0.8), industrial_wall)
+	_make_box("WestBulkhead", Vector3(-26, 2.35, 0), Vector3(0.8, 5.8, 52), industrial_wall)
+	_make_box("EastBulkhead", Vector3(26, 2.35, 0), Vector3(0.8, 5.8, 52), industrial_wall)
+	_build_map_layout(selected_map)
+	_build_kenney_props(selected_map)
+	_build_lights(selected_map)
 	var exit_pos := Vector3(0, 0, 10.5)
+	var spawn_pos := Vector3(0, 0, 17)
 	_build_extraction(exit_pos)
-	_build_ship(Vector3(0, 0, 17))
-	_build_hazard_details(map_index)
-	var loot_points := [
-		Vector3(-13, 0, -10), Vector3(12, 0, -12), Vector3(-15, 0, 7),
-		Vector3(15, 0, 8), Vector3(-5, 0, -1), Vector3(6, 0, 3),
-		Vector3(10, 0, 18), Vector3(-11, 0, 18), Vector3(2, 0, 5),
-		Vector3(17, 0, -1), Vector3(-18, 0, -17), Vector3(1, 0, 20)
-	]
+	_build_ship(spawn_pos)
+	_build_hazard_details(selected_map)
+	var loot_points: Array[Vector3] = _loot_points_for_map(selected_map)
 	var loot_ids: Array[String] = []
 	for i in range(loot_points.size()):
 		var item := LootScript.new()
@@ -66,17 +60,233 @@ func build(parent: Node, map_index: int, seed: int) -> Dictionary:
 		root.add_child(item)
 		item.position = loot_points[i]
 		loot_ids.append(item.item_id)
-	var enemy_spawns := [
-		Vector3(-17, 0, -16), Vector3(17, 0, -15), Vector3(16, 0, 15),
-		Vector3(-17, 0, 16)
-	]
 	return {
-		"spawn": Vector3(0, 0, 17),
+		"spawn": spawn_pos,
 		"exit": exit_pos,
-		"enemy_spawns": enemy_spawns,
+		"ship": spawn_pos,
+		"enemy_spawns": _enemy_spawns_for_map(selected_map),
 		"loot_ids": loot_ids,
-		"map_name": MAP_NAMES[map_index % MAP_NAMES.size()]
+		"map_name": MAP_NAMES[selected_map]
 	}
+
+func _loot_points_for_map(map_index: int) -> Array[Vector3]:
+	match map_index:
+		0:
+			return [
+				Vector3(-18, 0, -18), Vector3(18, 0, -18), Vector3(-20, 0, -2),
+				Vector3(20, 0, -2), Vector3(-14, 0, 5), Vector3(14, 0, 5),
+				Vector3(-7, 0, -10), Vector3(7, 0, -10), Vector3(-8, 0, 4),
+				Vector3(8, 0, 4), Vector3(-20, 0, 17), Vector3(20, 0, 17)
+			]
+		1:
+			return [
+				Vector3(-19, 0, -17), Vector3(19, 0, -17), Vector3(-18, 0, 1),
+				Vector3(18, 0, 1), Vector3(-8, 0, -5), Vector3(8, 0, -5),
+				Vector3(-7, 0, 5), Vector3(7, 0, 5), Vector3(-20, 0, 14),
+				Vector3(20, 0, 14), Vector3(-5, 0, 17), Vector3(5, 0, 17)
+			]
+		_:
+			return [
+				Vector3(-19, 0, -18), Vector3(19, 0, -18), Vector3(-20, 0, -5),
+				Vector3(20, 0, -5), Vector3(-7, 0, -7), Vector3(7, 0, -7),
+				Vector3(-19, 0, 5), Vector3(19, 0, 5), Vector3(-8, 0, 4),
+				Vector3(8, 0, 4), Vector3(-18, 0, 17), Vector3(18, 0, 17)
+			]
+
+func _enemy_spawns_for_map(map_index: int) -> Array[Vector3]:
+	match map_index:
+		0:
+			return [Vector3(-20, 0, -20), Vector3(20, 0, -20), Vector3(-20, 0, 4), Vector3(20, 0, 4)]
+		1:
+			return [Vector3(-20, 0, -18), Vector3(20, 0, -18), Vector3(-20, 0, 8), Vector3(20, 0, 8)]
+		_:
+			return [Vector3(-20, 0, -20), Vector3(20, 0, -20), Vector3(-20, 0, 8), Vector3(20, 0, 8)]
+
+func _build_map_layout(map_index: int) -> void:
+	match map_index:
+		0:
+			_build_foundry_layout()
+		1:
+			_build_lunar_relay_layout()
+		_:
+			_build_blacksite_layout()
+
+func _room_shell(label: String, center: Vector3, width: float, depth: float, height: float, wall_mat: Material) -> void:
+	var door_width := 3.8
+	var wall_thickness := 0.48
+	var floor_mat := _mat(dark.lightened(0.10), 0.72, 0.76)
+	_make_box(label + "_Floor", Vector3(center.x, 0.015, center.z), Vector3(width, 0.10, depth), floor_mat, false)
+	_make_box(label + "_NorthWall", Vector3(center.x, height * 0.5, center.z - depth * 0.5), Vector3(width, height, wall_thickness), wall_mat)
+	_make_box(label + "_WestWall", Vector3(center.x - width * 0.5, height * 0.5, center.z), Vector3(wall_thickness, height, depth), wall_mat)
+	_make_box(label + "_EastWall", Vector3(center.x + width * 0.5, height * 0.5, center.z), Vector3(wall_thickness, height, depth), wall_mat)
+	var segment_width := (width - door_width) * 0.5
+	var south_z := center.z + depth * 0.5
+	_make_box(label + "_SouthLeft", Vector3(center.x - (door_width + segment_width) * 0.5, height * 0.5, south_z), Vector3(segment_width, height, wall_thickness), wall_mat)
+	_make_box(label + "_SouthRight", Vector3(center.x + (door_width + segment_width) * 0.5, height * 0.5, south_z), Vector3(segment_width, height, wall_thickness), wall_mat)
+	_make_box(label + "_DoorHeader", Vector3(center.x, height - 0.34, south_z), Vector3(door_width, 0.68, wall_thickness), wall_mat)
+	var frame_mat := _mat(accent.darkened(0.15), 0.6, 0.32, true)
+	_make_box(label + "_DoorLeftLight", Vector3(center.x - door_width * 0.5 - 0.08, 1.7, south_z - 0.27), Vector3(0.10, 3.25, 0.10), frame_mat, false)
+	_make_box(label + "_DoorRightLight", Vector3(center.x + door_width * 0.5 + 0.08, 1.7, south_z - 0.27), Vector3(0.10, 3.25, 0.10), frame_mat, false)
+
+func _build_foundry_layout() -> void:
+	var wall_mat := _industrial_material()
+	var steel := _mat(Color(0.20, 0.25, 0.27), 0.88, 0.34)
+	var hot := _mat(Color(1.0, 0.18, 0.035), 0.25, 0.22, true)
+	var hazard := _mat(Color(1.0, 0.58, 0.08), 0.18, 0.48, true)
+	_room_shell("CastingBay_West", Vector3(-15, 0, -12), 13, 14, 4.7, wall_mat)
+	_room_shell("CastingBay_East", Vector3(15, 0, -12), 13, 14, 4.7, wall_mat)
+	for side in [-1.0, 1.0]:
+		var x: float = side * 15.0
+		_make_box("FurnaceHousing", Vector3(x, 1.65, -13.2), Vector3(5.2, 3.3, 4.4), steel)
+		_make_box("FurnaceMouth", Vector3(x, 1.50, -10.95), Vector3(3.5, 1.65, 0.12), hot, false)
+		_make_box("FurnaceUpperTrim", Vector3(x, 3.42, -13.2), Vector3(5.5, 0.22, 4.65), hazard, false)
+		_make_box("FurnaceControl", Vector3(x + side * 2.72, 1.55, -12.5), Vector3(0.12, 1.4, 1.25), steel, false)
+		_make_box("FurnaceStatus", Vector3(x + side * 2.80, 1.88, -12.8), Vector3(0.04, 0.22, 0.42), hot, false)
+		_make_cylinder(Vector3(x, 4.4, -14.3), 0.52, 2.3, steel)
+		_make_box("FurnaceExhaust", Vector3(x, 5.55, -14.3), Vector3(1.5, 0.2, 1.5), hazard, false)
+	for lane in [-2.4, 2.4]:
+		_make_box("OreConveyor", Vector3(lane, 0.32, -2.7), Vector3(1.45, 0.42, 14.0), steel)
+		_make_box("ConveyorBelt", Vector3(lane, 0.56, -2.7), Vector3(1.10, 0.08, 13.3), _mat(Color(0.055, 0.065, 0.07), 0.28, 0.9), false)
+		for roller in range(8):
+			_make_cylinder(Vector3(lane, 0.55, -8.6 + float(roller) * 1.7), 0.18, 1.3, _mat(Color(0.44, 0.47, 0.45), 0.8, 0.3))
+	for x in [-20.0, -10.0, 10.0, 20.0]:
+		_make_box("GantryLeg", Vector3(x, 2.5, -5.0), Vector3(0.42, 5.0, 0.42), steel)
+	_make_box("GantryCrossbeam", Vector3(0, 5.0, -5.0), Vector3(42, 0.42, 0.65), steel)
+	_make_box("GantryWarningRail", Vector3(0, 4.68, -5.0), Vector3(40, 0.10, 0.10), hazard, false)
+	for side in [-1.0, 1.0]:
+		var catwalk_x: float = side * 20.2
+		_make_box("FoundryCatwalk", Vector3(catwalk_x, 2.35, -5.0), Vector3(2.0, 0.18, 23.0), steel)
+		_make_box("CatwalkRail", Vector3(catwalk_x + side * 0.9, 3.0, -5.0), Vector3(0.12, 1.25, 23.0), hazard, false)
+		_make_box("CatwalkBrace", Vector3(catwalk_x, 1.2, -5.0), Vector3(0.18, 2.2, 18.0), steel)
+	for i in range(12):
+		var z := -19.0 + float(i) * 2.0
+		_make_box("FoundryFloorStripe", Vector3(-6.4, 0.018, z), Vector3(0.18, 0.025, 1.0), hazard, false)
+		_make_box("FoundryFloorStripe", Vector3(6.4, 0.018, z), Vector3(0.18, 0.025, 1.0), hazard, false)
+	for i in range(6):
+		var x := -17.0 + float(i) * 6.8
+		_make_box("OverheadPipe", Vector3(x, 4.65, 3.5), Vector3(0.32, 0.32, 15.0), steel, false)
+		_make_box("PipeValve", Vector3(x, 4.62, -3.0), Vector3(0.72, 0.16, 0.72), hazard, false)
+	_make_box("CoolingPool", Vector3(0, 0.02, -21.8), Vector3(12, 0.06, 2.6), hot, false)
+	_add_station_model("container-tall", Vector3(-21, 0, -14), 0.9, 0.0)
+	_add_station_model("container-wide", Vector3(21, 0, -14), 0.9, PI * 0.5)
+	_add_station_model("table-large", Vector3(-14, 0, -7), 0.9, 0.0)
+	_add_station_model("structure-barrier", Vector3(14, 0, -7), 0.75, PI * 0.5)
+
+func _build_lunar_relay_layout() -> void:
+	var wall_mat := _mat(Color(0.18, 0.26, 0.34), 0.76, 0.46)
+	var glass := _mat(Color(0.12, 0.55, 0.82, 0.24), 0.35, 0.18, true)
+	glass.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	var panel := _mat(Color(0.055, 0.16, 0.24), 0.76, 0.32)
+	_room_shell("RelayOperations", Vector3(0, 0, -14), 22, 13, 4.8, wall_mat)
+	_room_shell("RelayLab_West", Vector3(-16.5, 0, 0.0), 10, 12, 4.4, wall_mat)
+	_room_shell("RelayLab_East", Vector3(16.5, 0, 0.0), 10, 12, 4.4, wall_mat)
+	_make_box("ObservationGlass_West", Vector3(-10.8, 2.2, -14), Vector3(0.08, 2.5, 6.5), glass, false)
+	_make_box("ObservationGlass_East", Vector3(10.8, 2.2, -14), Vector3(0.08, 2.5, 6.5), glass, false)
+	_make_box("RelayControlIsland", Vector3(0, 0.72, -13), Vector3(8.6, 1.35, 3.0), panel)
+	_add_console_bank(Vector3(0, 1.45, -14.55), 5, accent)
+	_add_console_bank(Vector3(-16.5, 0.9, 0.0), 2, Color(0.22, 0.78, 1.0))
+	_add_console_bank(Vector3(16.5, 0.9, 0.0), 2, Color(0.22, 0.78, 1.0))
+	for i in range(4):
+		var z := -19.0 + float(i) * 4.3
+		_make_box("RelayServerRack", Vector3(-7.5, 1.55, z), Vector3(1.25, 3.1, 1.05), panel)
+		_make_box("RelayServerGlass", Vector3(-7.5, 1.75, z - 0.55), Vector3(0.82, 1.75, 0.04), glass, false)
+		_make_box("RelayServerRack", Vector3(7.5, 1.55, z), Vector3(1.25, 3.1, 1.05), panel)
+		_make_box("RelayServerGlass", Vector3(7.5, 1.75, z - 0.55), Vector3(0.82, 1.75, 0.04), glass, false)
+		_make_box("ServerStatus", Vector3(-7.5, 2.1, z - 0.59), Vector3(0.48, 0.06, 0.04), _mat(accent, 0.1, 0.25, true), false)
+	_make_cylinder(Vector3(0, 0.95, -22.2), 0.72, 1.9, panel)
+	_make_cylinder(Vector3(0, 3.1, -22.2), 0.18, 2.5, _mat(Color(0.42, 0.55, 0.62), 0.88, 0.25))
+	var dish := MeshInstance3D.new()
+	var dish_mesh := SphereMesh.new()
+	dish_mesh.radius = 2.0
+	dish_mesh.height = 0.35
+	dish.mesh = dish_mesh
+	dish.scale = Vector3(1.0, 0.18, 1.0)
+	dish.rotation.x = PI * 0.42
+	dish.position = Vector3(0, 4.25, -22.2)
+	dish.material_override = _mat(Color(0.22, 0.62, 0.82), 0.86, 0.22)
+	root.add_child(dish)
+	_make_box("RelayAntennaCrossbar", Vector3(0, 5.3, -22.2), Vector3(5.5, 0.12, 0.12), glass, false)
+	for side in [-1.0, 1.0]:
+		_make_box("RelayCableTray", Vector3(side * 22.0, 3.9, -2), Vector3(0.35, 0.22, 38), panel, false)
+		_make_box("WindowSupport", Vector3(side * 22.0, 2.1, 6.0), Vector3(0.22, 4.2, 0.28), wall_mat)
+	for i in range(8):
+		var x := -17.5 + float(i) * 5.0
+		_make_box("BlueFloorGuide", Vector3(x, 0.02, 7.4), Vector3(1.8, 0.03, 0.08), glass, false)
+	_add_station_model("wall-window", Vector3(-10.5, 0, -14), 0.85, PI * 0.5)
+	_add_station_model("wall-window", Vector3(10.5, 0, -14), 0.85, -PI * 0.5)
+	_add_station_model("table-display", Vector3(0, 0, -17.8), 0.75, 0.0)
+	_add_station_model("computer-wide", Vector3(-16.5, 0, -1.7), 0.8, 0.0)
+	_add_station_model("computer-wide", Vector3(16.5, 0, -1.7), 0.8, PI)
+	_add_station_model("chair", Vector3(-18.2, 0, 2.5), 0.9, 0.0)
+	_add_station_model("chair", Vector3(18.2, 0, 2.5), 0.9, PI)
+
+func _build_blacksite_layout() -> void:
+	var wall_mat := _mat(Color(0.20, 0.22, 0.27), 0.84, 0.38)
+	var glass := _mat(Color(0.10, 0.65, 0.70, 0.22), 0.5, 0.16, true)
+	glass.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	var black_panel := _mat(Color(0.045, 0.055, 0.075), 0.78, 0.36)
+	var red := _mat(Color(1.0, 0.035, 0.045), 0.2, 0.28, true)
+	_room_shell("ContainmentCore", Vector3(0, 0, -14), 18, 13, 4.8, wall_mat)
+	_room_shell("SpecimenCell_West", Vector3(-16, 0, -13), 11, 11, 4.4, wall_mat)
+	_room_shell("SpecimenCell_East", Vector3(16, 0, -13), 11, 11, 4.4, wall_mat)
+	_room_shell("AutopsyLab", Vector3(0, 0, 1.5), 20, 9, 4.4, wall_mat)
+	for x in [-8.8, 8.8]:
+		_make_box("ContainmentGlass", Vector3(x, 1.8, -14), Vector3(0.10, 2.5, 7.0), glass, false)
+	for z in [-17.0, -13.0, -9.0]:
+		_add_containment_tank(Vector3(0, 0, z), glass, red)
+	_add_containment_tank(Vector3(-16, 0, -14), glass, red)
+	_add_containment_tank(Vector3(16, 0, -14), glass, red)
+	_add_console_bank(Vector3(-4.5, 0.75, -5.0), 3, Color(1.0, 0.04, 0.06))
+	_add_console_bank(Vector3(4.5, 0.75, -5.0), 3, accent)
+	_make_box("AutopsyTable", Vector3(0, 0.85, 2.0), Vector3(5.0, 0.28, 1.8), black_panel)
+	_make_box("AutopsyScreen", Vector3(0, 2.0, -1.7), Vector3(4.8, 1.25, 0.12), red, false)
+	for side in [-1.0, 1.0]:
+		for i in range(3):
+			var z := -19.0 + float(i) * 4.0
+			_make_box("CellWarningStripe", Vector3(side * 21.3, 0.06, z), Vector3(0.16, 0.05, 1.4), red, false)
+			_make_box("CellDoorPanel", Vector3(side * 21.35, 2.0, z), Vector3(0.18, 3.6, 2.4), black_panel, false)
+			_make_box("CellStatus", Vector3(side * 21.23, 2.8, z - 0.8), Vector3(0.05, 0.20, 0.38), red, false)
+	for i in range(5):
+		var x := -17.0 + float(i) * 8.5
+		_make_box("LabFloorDrain", Vector3(x, 0.018, 6.0), Vector3(2.4, 0.025, 0.22), wall_mat, false)
+		_make_box("LabFloorHazard", Vector3(x, 0.035, 6.16), Vector3(2.4, 0.025, 0.08), red, false)
+	_add_station_model("wall-door", Vector3(-10.4, 0, -13), 0.85, PI * 0.5)
+	_add_station_model("wall-door", Vector3(10.4, 0, -13), 0.85, -PI * 0.5)
+	_add_station_model("computer-screen", Vector3(-5.0, 0, -4.2), 0.8, 0.0)
+	_add_station_model("computer-screen", Vector3(5.0, 0, -4.2), 0.8, PI)
+	_add_station_model("table", Vector3(0, 0, 3.2), 0.85, 0.0)
+	_add_station_model("bed-single", Vector3(-16.8, 0, -16.5), 0.8, PI * 0.5)
+	_add_station_model("bed-single", Vector3(16.8, 0, -16.5), 0.8, -PI * 0.5)
+
+func _add_console_bank(center: Vector3, count: int, tint: Color) -> void:
+	var console_mat := _mat(Color(0.055, 0.075, 0.09), 0.84, 0.28)
+	var screen_mat := _mat(tint, 0.25, 0.22, true)
+	_make_box("ConsoleBankBase", center + Vector3(0, 0.58, 0), Vector3(float(count) * 1.55 + 0.5, 1.16, 0.95), console_mat)
+	for i in range(count):
+		var x := center.x + (float(i) - float(count - 1) * 0.5) * 1.52
+		_make_box("ConsoleMonitor", Vector3(x, center.y + 1.45, center.z - 0.30), Vector3(1.18, 0.88, 0.12), console_mat, false)
+		_make_box("ConsoleScreen", Vector3(x, center.y + 1.47, center.z - 0.375), Vector3(0.94, 0.62, 0.025), screen_mat, false)
+		_make_box("ConsoleKeypad", Vector3(x, center.y + 1.18, center.z - 0.53), Vector3(0.85, 0.06, 0.30), screen_mat, false)
+
+func _add_containment_tank(position: Vector3, glass: Material, core: StandardMaterial3D) -> void:
+	var tank := MeshInstance3D.new()
+	var cylinder := CylinderMesh.new()
+	cylinder.top_radius = 0.78
+	cylinder.bottom_radius = 0.78
+	cylinder.height = 2.9
+	tank.mesh = cylinder
+	tank.position = position + Vector3(0, 1.48, 0)
+	tank.material_override = glass
+	root.add_child(tank)
+	_make_cylinder(position + Vector3(0, 1.45, 0), 0.18, 2.5, core)
+	_make_cylinder(position + Vector3(0, 0.10, 0), 0.95, 0.20, _mat(Color(0.22, 0.27, 0.30), 0.86, 0.3))
+	var light := OmniLight3D.new()
+	light.position = position + Vector3(0, 2.6, 0)
+	light.light_color = core.albedo_color
+	light.light_energy = 0.65
+	light.omni_range = 5.5
+	light.shadow_enabled = false
+	root.add_child(light)
 
 func _add_environment(map_index: int) -> void:
 	var env_node := WorldEnvironment.new()
@@ -85,7 +295,7 @@ func _add_environment(map_index: int) -> void:
 	env.background_color = Color(0.012, 0.019, 0.027)
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	env.ambient_light_color = Color(0.38, 0.46, 0.52)
-	env.ambient_light_energy = 0.54
+	env.ambient_light_energy = 0.72
 	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 	env.fog_enabled = true
 	env.fog_light_color = Color(0.055, 0.085, 0.10)
@@ -100,7 +310,7 @@ func _add_environment(map_index: int) -> void:
 	root.add_child(sun)
 
 func _build_corridors() -> void:
-	var wall_mat := _mat(Color(0.16, 0.20, 0.22), 0.78, 0.55)
+	var wall_mat := _industrial_material()
 	for x in [-10.0, 0.0, 10.0]:
 		_make_box("SupportColumn", Vector3(x, 2.0, -1), Vector3(0.75, 4.0, 0.75), wall_mat)
 	for z in [-11.0, 0.0, 11.0]:
@@ -140,18 +350,110 @@ func _build_props(map_index: int) -> void:
 		for i in range(6):
 			_make_cylinder(Vector3(-17 + i * 6.8, 0.8, 4), 0.66, 1.6, _mat(Color(0.31, 0.15, 0.12), 0.65, 0.4))
 
-func _build_lights() -> void:
-	for p in [Vector3(-16, 3.0, -14), Vector3(16, 3.0, -14), Vector3(-16, 3.0, 14), Vector3(16, 3.0, 14), Vector3(0, 3.0, 0)]:
+
+func _industrial_material() -> StandardMaterial3D:
+	var mat := _mat(Color(0.74, 0.78, 0.76), 0.58, 0.82)
+	var diffuse_path := "res://assets/textures/industrial/rusty_painted_metal_diff_1k.jpg"
+	var rough_path := "res://assets/textures/industrial/rusty_painted_metal_rough_1k.jpg"
+	if ResourceLoader.exists(diffuse_path):
+		mat.albedo_texture = load(diffuse_path) as Texture2D
+		mat.uv1_scale = Vector3(3.0, 3.0, 1.0)
+	if ResourceLoader.exists(rough_path):
+		mat.roughness_texture = load(rough_path) as Texture2D
+		mat.roughness = 0.82
+	return mat
+
+func _build_kenney_props(map_index: int) -> void:
+	match map_index:
+		0:
+			_add_kenney_model("machine-generator", Vector3(-15, 0, -12), 1.15, 0.0)
+			_add_kenney_model("machine-generator", Vector3(15, 0, -12), 1.15, PI)
+			_add_kenney_model("barrels", Vector3(-21, 0, -4), 1.15, 0.2)
+			_add_kenney_model("barrels", Vector3(21, 0, -4), 1.15, 1.1)
+			_add_station_model("pipe", Vector3(-21.5, 3.8, -3), 1.0, PI * 0.5)
+			_add_station_model("pipe", Vector3(21.5, 3.8, -3), 1.0, PI * 0.5)
+			_add_station_model("floor-panel", Vector3(-6.4, 0.04, -2), 0.85, 0.0)
+			_add_station_model("floor-panel", Vector3(6.4, 0.04, -2), 0.85, 0.0)
+			_add_station_model("wall-detail", Vector3(-22.8, 1.8, 4), 0.9, PI * 0.5)
+		1:
+			_add_kenney_model("machine-wireless", Vector3(0, 0, -21), 0.9, 0.0)
+			_add_kenney_model("corridor-detailed", Vector3(0, 0, 8), 0.8, PI)
+			_add_station_model("floor-panel-straight", Vector3(-4, 0.04, 2), 0.9, 0.0)
+			_add_station_model("floor-panel-straight", Vector3(4, 0.04, 2), 0.9, 0.0)
+			_add_station_model("wall-banner", Vector3(-21.5, 2.0, -4), 0.9, PI * 0.5)
+			_add_station_model("wall-banner", Vector3(21.5, 2.0, -4), 0.9, -PI * 0.5)
+			_add_station_model("pipe-ring", Vector3(0, 4.1, -6), 1.0, 0.0)
+			_add_station_model("computer-system", Vector3(-16.5, 0, 1.2), 0.8, 0.0)
+			_add_station_model("computer-system", Vector3(16.5, 0, 1.2), 0.8, PI)
+		_:
+			_add_kenney_model("barrels", Vector3(-21, 0, -5), 1.1, 0.0)
+			_add_station_model("structure-barrier-high", Vector3(-16, 0, -8), 0.72, PI * 0.5)
+			_add_station_model("structure-barrier-high", Vector3(16, 0, -8), 0.72, -PI * 0.5)
+			_add_station_model("wall-switch", Vector3(-21.4, 1.8, -3), 0.9, PI * 0.5)
+			_add_station_model("wall-switch", Vector3(21.4, 1.8, -3), 0.9, -PI * 0.5)
+			_add_station_model("pipe-bend", Vector3(-20.5, 3.7, 3), 1.0, PI)
+			_add_station_model("pipe-bend", Vector3(20.5, 3.7, 3), 1.0, 0.0)
+			_add_station_model("container-flat", Vector3(-20, 0, 5), 0.9, 0.0)
+			_add_station_model("container-flat", Vector3(20, 0, 5), 0.9, PI)
+
+func _add_station_model(model_name: String, position: Vector3, scale_value: float, yaw: float) -> void:
+	var path := "res://assets/models/kenney_station/%s.glb" % model_name
+	if not ResourceLoader.exists(path):
+		return
+	var packed: PackedScene = station_cache.get(model_name) as PackedScene
+	if packed == null:
+		packed = load(path) as PackedScene
+		if packed == null:
+			return
+		station_cache[model_name] = packed
+	var instance := packed.instantiate() as Node3D
+	if instance == null:
+		return
+	instance.name = "StationKit_" + model_name
+	instance.position = position
+	instance.rotation.y = yaw
+	instance.scale = Vector3.ONE * scale_value
+	root.add_child(instance)
+
+func _add_kenney_model(model_name: String, position: Vector3, scale_value: float, yaw: float) -> void:
+	var path := "res://assets/models/kenney/%s.glb" % model_name
+	if not ResourceLoader.exists(path):
+		return
+	var packed: PackedScene = kenney_cache.get(model_name) as PackedScene
+	if packed == null:
+		packed = load(path) as PackedScene
+		if packed == null:
+			return
+		kenney_cache[model_name] = packed
+	var instance := packed.instantiate() as Node3D
+	if instance == null:
+		return
+	instance.name = "Kenney_" + model_name
+	instance.position = position
+	instance.rotation.y = yaw
+	instance.scale = Vector3.ONE * scale_value
+	root.add_child(instance)
+
+func _build_lights(map_index: int) -> void:
+	var points: Array[Vector3] = []
+	match map_index:
+		0:
+			points = [Vector3(-17, 3.4, -16), Vector3(17, 3.4, -16), Vector3(-20, 3.1, -2), Vector3(20, 3.1, -2), Vector3(0, 4.5, -5), Vector3(-14, 3.5, 3), Vector3(14, 3.5, 3)]
+		1:
+			points = [Vector3(-9, 3.5, -18), Vector3(9, 3.5, -18), Vector3(-17, 3.2, -2), Vector3(17, 3.2, -2), Vector3(0, 4.4, -7), Vector3(0, 3.2, 7)]
+		_:
+			points = [Vector3(-8, 3.5, -18), Vector3(8, 3.5, -18), Vector3(-20, 3.0, -12), Vector3(20, 3.0, -12), Vector3(-12, 3.0, 2), Vector3(12, 3.0, 2), Vector3(0, 3.8, 5)]
+	for p in points:
 		var lamp := OmniLight3D.new()
 		lamp.position = p
 		lamp.light_color = accent
-		lamp.light_energy = 0.78
-		lamp.omni_range = 9.5
+		lamp.light_energy = 0.92 if map_index != 2 else 0.78
+		lamp.omni_range = 10.5
 		lamp.shadow_enabled = false
 		root.add_child(lamp)
 		var fixture := MeshInstance3D.new()
 		var box := BoxMesh.new()
-		box.size = Vector3(1.0, 0.09, 0.28)
+		box.size = Vector3(1.2, 0.10, 0.32)
 		fixture.mesh = box
 		fixture.position = p
 		fixture.material_override = _mat(accent, 0.2, 0.3, true)
@@ -187,7 +489,7 @@ func _build_ship(pos: Vector3) -> void:
 	_make_box("ShipCockpitGlass", pos + Vector3(0, 1.55, -3.38), Vector3(3.4, 1.0, 0.12), glass, false)
 	_make_box("ShipRamp", pos + Vector3(0, 0.02, -4.15), Vector3(5.6, 0.18, 1.8), edge, false)
 	for side in [-1.0, 1.0]:
-		var engine_pos := pos + Vector3(side * 4.45, 1.05, 2.35)
+		var engine_pos: Vector3 = pos + Vector3(side * 4.45, 1.05, 2.35)
 		_make_box("ShipEnginePod", engine_pos, Vector3(0.85, 1.35, 2.4), hull, false)
 		_make_box("ShipEngineGlow", engine_pos + Vector3(0, 0, 1.22), Vector3(0.48, 0.78, 0.12), glass, false)
 		_make_box("ShipBench", pos + Vector3(side * 2.7, 0.72, 0.7), Vector3(1.4, 0.85, 2.1), hull, false)
@@ -234,31 +536,40 @@ func _make_ship_terminal(pos: Vector3, hull: Material, screen: Material) -> void
 
 func _build_hazard_details(map_index: int) -> void:
 	var pipe_mat := _mat(Color(0.22, 0.29, 0.31), 0.88, 0.28)
-	var stripe_mat := _mat(Color(0.88, 0.43, 0.10), 0.18, 0.52, true)
+	var stripe_mat := _mat(accent, 0.18, 0.48, true)
 	var panel_mat := _mat(Color(0.075, 0.105, 0.12), 0.72, 0.48)
 	for side in [-1.0, 1.0]:
-		_make_box("CeilingConduit", Vector3(side * 21.2, 4.45, 0), Vector3(0.22, 0.22, 42), pipe_mat, false)
-		_make_box("FloorWarningLine", Vector3(side * 22.4, 0.015, 0), Vector3(0.12, 0.025, 44), stripe_mat, false)
+		_make_box("CeilingConduit", Vector3(side * 24.2, 4.75, 0), Vector3(0.22, 0.22, 46), pipe_mat, false)
+		_make_box("FloorWarningLine", Vector3(side * 24.7, 0.015, 0), Vector3(0.12, 0.025, 46), stripe_mat, false)
 	for i in range(8):
 		var z := -18.0 + float(i) * 5.0
-		_make_box("WallServicePanel", Vector3(-23.48, 1.7, z), Vector3(0.06, 1.25, 1.55), panel_mat, false)
-		_make_box("PanelStatusLED", Vector3(-23.40, 2.05, z - 0.42), Vector3(0.035, 0.10, 0.18), _mat(accent, 0.1, 0.25, true), false)
-	for i in range(6):
-		var x := -15.0 + float(i) * 6.0
-		_make_box("FloorDrain", Vector3(x, 0.012, 0), Vector3(1.8, 0.025, 0.42), pipe_mat, false)
-		_make_box("DrainHazard", Vector3(x, 0.03, 0.25), Vector3(1.8, 0.025, 0.08), stripe_mat, false)
-	for i in range(4):
-		var vent := MeshInstance3D.new()
-		var vent_mesh := BoxMesh.new()
-		vent_mesh.size = Vector3(1.8, 0.08, 0.75)
-		vent.mesh = vent_mesh
-		vent.position = Vector3(-16.0 + float(i) * 10.5, 4.82, -20.0)
-		vent.material_override = pipe_mat
-		root.add_child(vent)
-	if map_index == 0 or map_index == 5:
+		_make_box("WallServicePanel", Vector3(-25.48, 1.7, z), Vector3(0.06, 1.25, 1.55), panel_mat, false)
+		_make_box("PanelStatusLED", Vector3(-25.40, 2.05, z - 0.42), Vector3(0.035, 0.10, 0.18), stripe_mat, false)
+	if map_index == 0:
 		for i in range(5):
-			var steam_pipe := _make_steam_stack(Vector3(-18.0 + float(i) * 9.0, 0, 8.0), accent)
-			root.add_child(steam_pipe)
+			var steam_stack := _make_steam_stack(Vector3(-18.0 + float(i) * 9.0, 0, 8.0), accent)
+			root.add_child(steam_stack)
+		for i in range(7):
+			_make_box("FoundryFloorGrate", Vector3(-18.0 + float(i) * 6.0, 0.014, 12.0), Vector3(2.8, 0.024, 0.34), pipe_mat, false)
+	elif map_index == 1:
+		for i in range(9):
+			var x: float = -20.0 + float(i) * 5.0
+			_make_box("RelayCableLight", Vector3(x, 0.02, 8.8), Vector3(1.8, 0.03, 0.09), stripe_mat, false)
+			_make_box("CeilingCableBracket", Vector3(x, 4.7, -1.0), Vector3(0.22, 0.22, 1.4), pipe_mat, false)
+			_make_box("RelayCeilingStrip", Vector3(x, 4.72, -14.0), Vector3(2.8, 0.07, 0.12), stripe_mat, false)
+	else:
+		for i in range(8):
+			var x: float = -21.0 + float(i) * 6.0
+			_make_box("BlacksiteContainmentMark", Vector3(x, 0.02, 8.5), Vector3(1.7, 0.03, 0.12), stripe_mat, false)
+			_make_box("BiohazardCeilingRail", Vector3(x, 4.7, -10.0), Vector3(0.18, 0.20, 4.0), pipe_mat, false)
+		for side in [-1.0, 1.0]:
+			var alarm := OmniLight3D.new()
+			alarm.position = Vector3(side * 21.5, 3.4, -13)
+			alarm.light_color = Color(1.0, 0.025, 0.035)
+			alarm.light_energy = 1.4
+			alarm.omni_range = 7.0
+			alarm.shadow_enabled = false
+			root.add_child(alarm)
 
 func _make_steam_stack(pos: Vector3, tint: Color) -> Node3D:
 	var assembly := Node3D.new()

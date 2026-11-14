@@ -17,4 +17,99 @@ curl --fail --location --silent --show-error --retry 3 \
   "https://raw.githubusercontent.com/Ariescar/gobkit-free-assets/main/LICENSE" \
   --output "$DEST/LICENSE-CC0.txt"
 
-echo "Imported $(find "$DEST" -name '*.glb' | wc -l) low-poly robot models."
+# Kenney Space Kit CC0 models (small, self-contained GLBs).
+KENNEY_DIR="assets/models/kenney"
+KENNEY_BASE="https://raw.githubusercontent.com/Hidencod/tge-assets/main/packs/space-kit"
+mkdir -p "$KENNEY_DIR"
+for model in barrels machine-generator machine-wireless corridor-detailed corridor-wall pipe-straight craft-cargoa astronauta; do
+  echo "Fetching Kenney Space Kit: ${model}.glb"
+  curl --fail --location --silent --show-error --retry 3 \
+    "$KENNEY_BASE/${model}.glb" --output "$KENNEY_DIR/${model}.glb"
+  test -s "$KENNEY_DIR/${model}.glb"
+done
+cat > "$KENNEY_DIR/LICENSE-CC0.txt" <<'LICENSE'
+Kenney Space Kit models
+Source pack: https://kenney.nl/assets/space-kit
+GLB mirror/catalog: https://github.com/Hidencod/tge-assets
+License: Creative Commons Zero 1.0 (CC0).
+Kenney's official licensing FAQ confirms the game assets are public-domain/CC0:
+https://kenney.nl/support
+Attribution is not required; credit is included in this project.
+LICENSE
+
+# Poly Haven CC0 PBR maps: 1K JPEGs keep Android download size moderate.
+TEXTURE_DIR="assets/textures/industrial"
+TEXTURE_BASE="https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/rusty_painted_metal"
+mkdir -p "$TEXTURE_DIR"
+for map in diff rough; do
+  if curl --fail --location --silent --show-error --retry 3 \
+    --user-agent "RogueMachines-AndroidBuild/1.0 (asset-import)" \
+    "$TEXTURE_BASE/rusty_painted_metal_${map}_1k.jpg" \
+    --output "$TEXTURE_DIR/rusty_painted_metal_${map}_1k.jpg"; then
+    test -s "$TEXTURE_DIR/rusty_painted_metal_${map}_1k.jpg"
+  else
+    echo "WARNING: Poly Haven temporarily blocked the ${map} map; continuing with procedural fallback."
+    rm -f "$TEXTURE_DIR/rusty_painted_metal_${map}_1k.jpg"
+  fi
+done
+cat > "$TEXTURE_DIR/LICENSE-CC0.txt" <<'LICENSE'
+Texture: Rusty Painted Metal
+Creator: Amal Kumar
+Source: https://polyhaven.com/a/rusty_painted_metal
+Maps: diffuse and roughness (1K JPEG).
+License: CC0 1.0 Universal.
+LICENSE
+
+# Kenney Space Station Kit CC0 models (pinned public GLB mirror).
+# Official pack page: https://kenney.nl/assets/space-station-kit
+STATION_DIR="assets/models/kenney_station"
+STATION_BASE="https://raw.githubusercontent.com/jonathaneeckhout/godot-fps-multiplayer/7bf5c62a9bc301e4f82e2c2ec51f3125f00d6e47/assets/models/map/kenny_space-station-kit"
+mkdir -p "$STATION_DIR"
+mkdir -p "$STATION_DIR/Textures"
+curl --fail --location --silent --show-error --retry 3 \
+  "https://raw.githubusercontent.com/jonathaneeckhout/godot-fps-multiplayer/7bf5c62a9bc301e4f82e2c2ec51f3125f00d6e47/assets/models/map/kenny_space-station-kit/Textures/colormap.png" \
+  --output "$STATION_DIR/Textures/colormap.png"
+test -s "$STATION_DIR/Textures/colormap.png"
+for model in wall wall-window wall-door wall-pillar wall-detail wall-switch wall-banner floor floor-detail floor-panel floor-panel-straight structure structure-panel structure-barrier structure-barrier-high table table-large table-display computer computer-screen computer-system computer-wide container container-flat container-tall chair bed-single pipe pipe-bend pipe-ring; do
+  echo "Fetching Kenney Space Station Kit: ${model}.glb"
+  curl --fail --location --silent --show-error --retry 3 \
+    "$STATION_BASE/${model}.glb" --output "$STATION_DIR/${model}.glb"
+  test -s "$STATION_DIR/${model}.glb"
+done
+cat > "$STATION_DIR/LICENSE-CC0.txt" <<'LICENSE'
+Kenney Space Station Kit
+Official source: https://kenney.nl/assets/space-station-kit
+License: Creative Commons Zero 1.0 Universal (CC0).
+The GLB files are fetched from a pinned mirror commit for reproducible Android builds.
+LICENSE
+
+# Kenney Sci-Fi Sounds: unpack the OGG effects and preserve the ZIP license.
+AUDIO_DIR="assets/audio/kenney_sci_fi"
+AUDIO_ZIP="${TMPDIR:-/tmp}/kenney_sci-fi-sounds.zip"
+mkdir -p "$AUDIO_DIR"
+if ! curl --fail --location --silent --show-error --retry 3 \
+  --user-agent "RogueMachines-AndroidBuild/1.0 (asset-import)" \
+  "https://kenney.nl/media/pages/assets/sci-fi-sounds/6b296f9ecf-1677589334/kenney-sci-fi-sounds.zip" \
+  --output "$AUDIO_ZIP"; then
+  echo "WARNING: Kenney sound archive unavailable; continuing with generated ambience and silent SFX fallback."
+  exit 0
+fi
+if ! unzip -tq "$AUDIO_ZIP" >/dev/null 2>&1; then
+  echo "WARNING: Kenney returned an invalid sound archive; continuing with procedural ambience and no imported one-shot SFX."
+  exit 0
+fi
+AUDIO_TMP="${TMPDIR:-/tmp}/kenney-sci-fi-sounds"
+rm -rf "$AUDIO_TMP"
+mkdir -p "$AUDIO_TMP"
+unzip -oq "$AUDIO_ZIP" -d "$AUDIO_TMP"
+find "$AUDIO_TMP" -type f -iname '*.ogg' -exec cp -f {} "$AUDIO_DIR/" \;
+find "$AUDIO_TMP" -type f \( -iname 'license.txt' -o -iname 'licence.txt' \) -exec cp -f {} "$AUDIO_DIR/" \;
+cat > "$AUDIO_DIR/LICENSE-CC0.txt" <<'LICENSE'
+Kenney Sci-fi Sounds
+Source: https://kenney.nl/assets/sci-fi-sounds
+License: Creative Commons Zero 1.0 (CC0).
+The pack contains 70 OGG effects. Kenney's asset page lists CC0:
+https://kenney.nl/assets/sci-fi-sounds
+LICENSE
+test "$(find "$AUDIO_DIR" -type f -iname '*.ogg' | wc -l)" -gt 0
+echo "Imported $(find "$KENNEY_DIR" -name '*.glb' | wc -l) Kenney props, $(find "$TEXTURE_DIR" -name '*.jpg' | wc -l) PBR maps and $(find "$AUDIO_DIR" -name '*.ogg' | wc -l) CC0 sci-fi sounds."
